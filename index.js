@@ -1,7 +1,5 @@
 'use strict';
 const API_URL = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioBlueprintHook";
-
-const crypto = require('crypto');
 const https = require('https');
 var AWS = require('aws-sdk');
 
@@ -18,7 +16,6 @@ const respond = (callback, contents) => {
 	)
 };
 const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
-// const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
 
 var params = {
 	botAlias: 'blue',
@@ -34,10 +31,10 @@ const callAmazonLex = (event, callback, buffer) => {
 	params.inputStream = buffer;
 	lexruntime.postContent(params, function (err, data) {
 		if (err) {
-			console.log("error Message", err.stack, "type of err", typeof err);
+			console.log("error Message", err.stack);
 			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
 		} else {
-			console.log("success message", data.message, "type of message", typeof data.message);
+			console.log("success message", data.message);
 			respond(callback, `<Say>${data.message}</Say><Redirect></Redirect>`);
 		}
 	});

@@ -10,7 +10,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/filanthropic/LexTwilioIntegration.git"
+    "url": "https://github.com/nkhs/aws-lex-twilio.git"
   },
   "dependencies": {
     "aws-sdk": "^2.39.0",
