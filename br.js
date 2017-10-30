@@ -153,7 +153,7 @@ function getAvailabilities(onSuccess, date, intentRequest, callback) {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         form: {
-            'date': "2017-10-20"
+            'date': date
         },
 
         //"rejectUnauthorized": false,
@@ -174,6 +174,7 @@ function getAvailabilities(onSuccess, date, intentRequest, callback) {
 var returnCallback = function (body, date, intentRequest, callback) {
     const availabilities = [];
     const results = JSON.parse(body);
+    //console.log("Result=" + results.length);
     if (!results)
         return null;
     for (var i = 0; i < results.length; i++) {
@@ -253,12 +254,7 @@ function buildValidationResult(isValid, violatedSlot, messageContent) {
     };
 }
 
-function validateBookAppointment(callType, date, aptime) {
-    if (callType) {
-        if ((callType != "1") && (callType != "2")) {
-            return buildValidationResult(false, 'CallType', ' Press 1 to schedule a appointment or 2 to connect to receptionist.');
-        }
-    }
+function validateBookAppointment(date, aptime) {
     if (date) {
         if (!isValidDate(date)) {
             return buildValidationResult(false, 'Date', 'I did not understand that, what date works best for you?');
@@ -320,17 +316,7 @@ function buildAvailableTimeString(availabilities) {
 // Build a list of potential options for a given slot, to be used in responseCard generation.
 function buildOptions(slot, date, bookingMap) {
     const dayStrings = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    if (slot === "CallType") {
-        const options = [];
-        options.push({
-            text: `Press 1 to schedule`,
-            value: `Press 1 to schedule`
-        });
-        options.push({
-            text: `Press 1 to connect to receptionist`,
-            value: `Press 2 to connect to receptionist`
-        });
-    } else if (slot === 'Date') {
+    if (slot === 'Date') {
         // Return the next five weekdays.
         const options = [];
         const potentialDate = new Date();
@@ -419,7 +405,6 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
 }
 
 function makeAppointment_afterDay(intentRequest, callback) {
-    const callType = intentRequest.currentIntent.slots.CallType;
     const date = intentRequest.currentIntent.slots.Date;
     let aptime = intentRequest.currentIntent.slots.APTime;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
@@ -462,12 +447,15 @@ function makeAppointment_afterDay(intentRequest, callback) {
             apt = "PM"; //AM or PM
         let length = bookingAvailabilities.length;
         let tmp_array = [];
-        tmp_array = bookingAvailabilities;
+        tmp_array = bookingAvailabilities.slice();
         for (let i = 0; i < length; i++) {
             let obj = tmp_array[i];
-            let time = tmp_array[i].start_time.substring(6, 8);
-            if (time != apt)
+            let start_time_length = tmp_array[i].start_time.length;
+            let time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
+            if (time != apt){
                 bookingAvailabilities.splice(bookingAvailabilities.indexOf(obj), 1);
+                console.log("Time="+time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
+            }
         }
         if (bookingAvailabilities.length == 0) {
             slots.Date = null;
@@ -576,7 +564,6 @@ function makeAppointment_afterDay(intentRequest, callback) {
  */
 function makeAppointment(intentRequest, callback) {
 
-    const callType = intentRequest.currentIntent.slots.CallType;
     const date = intentRequest.currentIntent.slots.Date;
     let aptime = intentRequest.currentIntent.slots.APTime;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
@@ -590,7 +577,7 @@ function makeAppointment(intentRequest, callback) {
     if (source === 'DialogCodeHook') {
         // Perform basic validation on the supplied input slots.
         const slots = intentRequest.currentIntent.slots;
-        const validationResult = validateBookAppointment(callType, date, aptime);
+        const validationResult = validateBookAppointment(date, aptime);
         if (!validationResult.isValid) {
             slots[`${validationResult.violatedSlot}`] = null;
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
@@ -600,36 +587,19 @@ function makeAppointment(intentRequest, callback) {
             return;
         }
 
-        if (!callType) {
+        if (!date) {
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
-                intentRequest.currentIntent.slots, 'CallType', {
+                intentRequest.currentIntent.slots, 'Date', {
                     contentType: 'PlainText',
-                    content: 'Hi welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions.'
+                    content: `What day would you like to come in?`
                 },
-                buildResponseCard('Specify your Decision', 'Press 1 to book an appointment,  press 2 for all questions.',
-                    buildOptions('CallType', date, null))));
+                buildResponseCard('Specify Date', `What day would you like to come in?`,
+                    buildOptions('Date', date, null))));
+
             return;
         }
 
-        if (callType && !date) {
-            if (callType == 1) {
-                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
-                    intentRequest.currentIntent.slots, 'Date', {
-                        contentType: 'PlainText',
-                        content: `What day would you like to come in?`
-                    },
-                    buildResponseCard('Specify Date', `What day would you like to come in?`,
-                        buildOptions('Date', date, null))));
-            } else if (callType == 2) {
-                callback(close(outputSessionAttributes, 'Fulfilled', {
-                    contentType: 'PlainText',
-                    content: `Please connect to receptionist.`
-                }));
-            }
-            return;
-        }
-
-        if (callType && date) {
+        if (date) {
             // Fetch or generate the availabilities for the given date.
 
             let bookingAvailabilities = bookingMap[`${date}`];
