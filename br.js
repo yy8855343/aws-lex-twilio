@@ -431,7 +431,6 @@ function makeAppointment_afterDay(intentRequest, callback) {
     const bookingMap = JSON.parse(outputSessionAttributes.bookingMap || '{}');
     const slots = intentRequest.currentIntent.slots;
 
-    //date = "2017-10-20";
     let bookingAvailabilities = bookingMap[`${date}`];
 
     if (bookingAvailabilities == null || bookingAvailabilities.length === 0) {
@@ -576,8 +575,8 @@ function makeAppointment_afterDay(intentRequest, callback) {
  *      on the bot model and the inferred slot values fully specify the intent.
  */
 function makeAppointment(intentRequest, callback) {
-    intentRequest.currentIntent.slots.CallType = 1;
-    const callType = intentRequest.currentIntent.slots.CallType ;
+
+    const callType = intentRequest.currentIntent.slots.CallType;
     const date = intentRequest.currentIntent.slots.Date;
     let aptime = intentRequest.currentIntent.slots.APTime;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
@@ -671,7 +670,6 @@ function dispatch(intentRequest, callback) {
 
     // Dispatch to your skill's intent handlers
     if (name === 'BrentwoodAppointment') {
-        console.log(intentRequest)
         return makeAppointment(intentRequest, callback);
     }
     throw new Error(`Intent with name ${name} not supported`);

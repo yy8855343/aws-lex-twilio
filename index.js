@@ -22,7 +22,7 @@ const respond = (callback, contents) => {
 var params = {
 	botAlias: 'blue',
 	contentType: "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false",
-	botName: 'OrderFlowers',//'Bookappointment',
+	botName: 'Bookappointment',//'Bookappointment',
 	accept: "text/plain; charset=utf-8",
 	userId: 'wyumpkwy84e5ka8r79hymiqsyk5l2cqj',
 	requestAttributes: {},
@@ -73,6 +73,7 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 		});
 
 };
+const speatBegin = "  ";//"Please Speak."
 const recordVoice = (event, callback) => {
 
 	const bodyJson = event["body-json"] + "";
@@ -85,7 +86,7 @@ const recordVoice = (event, callback) => {
 			return getAudioBufferFromUrl(event, callback, tmpUrl);
 		}
 	}
-	respond(callback, `<Say>Please Speak. </Say><Record action="${API_URL}" /><Redirect></Redirect>`);
+	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" /><Redirect></Redirect>`);
 };
 
 const main = (event, callback) => {
