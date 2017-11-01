@@ -1,4 +1,5 @@
 'use strict';
+const API_URL_SELF = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioblueprinthookkeyboard";
 const API_URL = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioBlueprintHook";
 
 const respond = (callback, contents) => {
@@ -28,16 +29,21 @@ const main = (event, callback) => {
 		if (arrString[i].includes("Digits")) {
 			let keyboard = arrString[i].slice(-1);
 			if (keyboard == "1") {
-				return respond(callback, `<Say>${speatFor_one}</Say><Record action="${API_URL}" /><Redirect />`);
+				return respond(callback, `
+					<Gather input="speech" timeout="3" action="${API_URL}">
+						<Say>${speatFor_one}</Say>
+					</Gather>
+					`);
+				//--------- <Record action="${API_URL}" timeout="3"/>
 			}
 			if (keyboard == "2") {
 				return respond(callback,
-					`<Say>${speatFor_two}</Say><Dial timeout="10" record="true">${phoneNumber}</Dial>`);
+					`<Say>${speatFor_two}</Say><Dial timeout="10">${phoneNumber}</Dial>`);
 			}
 		}
 	}
 	return respond(callback,
-		`<Gather method="POST" numDigits="1" action="${API_URL}">
+		`<Gather input="dtmf" numDigits="1" action="${API_URL_SELF}">
 			<Say>Hi</Say>
 			<Pause length="1" />
 			<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>

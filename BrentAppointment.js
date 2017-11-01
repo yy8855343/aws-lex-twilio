@@ -451,10 +451,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
         for (let i = 0; i < length; i++) {
             let obj = tmp_array[i];
             let start_time_length = tmp_array[i].start_time.length;
-            let time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
-            if (time != apt){
+            let time = tmp_array[i].start_time.substring(start_time_length - 2, start_time_length);
+            if (time != apt) {
                 bookingAvailabilities.splice(bookingAvailabilities.indexOf(obj), 1);
-                console.log("Time="+time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
+                console.log("Time=" + time + "///APT=" + apt + "Result=" + JSON.stringify(bookingAvailabilities));
             }
         }
         if (bookingAvailabilities.length == 0) {
@@ -640,6 +640,7 @@ function dispatch(intentRequest, callback) {
 
     // Dispatch to your skill's intent handlers
     if (name === 'BrentwoodAppointment') {
+        console.log(intentRequest);
         return makeAppointment(intentRequest, callback);
     }
     throw new Error(`Intent with name ${name} not supported`);

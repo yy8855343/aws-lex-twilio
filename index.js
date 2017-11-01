@@ -8,15 +8,19 @@ var lexruntime = new AWS.LexRuntime({
 });
 
 const respond = (callback, contents) => {
-	console.log('--------------------------------- last ---------------------------------');
-	console.log(contents);
-	console.log('--------------------------------- last length--------- ' + contents.length);
+	// console.log('--------------------------------- last ---------------------------------');
+	// console.log(contents);
+	// console.log('--------------------------------- last length--------- ' + contents.length);
 	callback(null,
 		`<?xml version="1.0" encoding="UTF-8"?><Response>${contents}</Response>`
 	)
 };
-const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
 
+// const contentType = "audio/l16; rate=16000; channels=1";
+// const contentType = "audio/x-l16; sample-rate=16000; channel-count=1";
+// const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
+// const contentType = "audio/x-cbr-opus-with-preamble; preamble-size=0; bit-rate=256000; frame-size-milliseconds=4";
+const contentType = "text/plain; charset=utf-8";
 var params = {
 	botAlias: 'blue',
 	contentType: contentType,
@@ -27,49 +31,25 @@ var params = {
 	sessionAttributes: {}
 };
 
-const callAmazonLex = (event, callback, buffer) => {
-	params.inputStream = buffer;
-	lexruntime.postContent(params, function (err, data) {
-		if (err) {
-			console.log("error Message", err.stack);
-			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
-		} else {
-			console.log("success message", data.message);
-			respond(callback, `<Say>${data.message}</Say><Redirect></Redirect>`);
-		}
-	});
-};
-const getAudioBufferFromUrl = (event, callback, audioUrl) => {
-	console.log("Called GetAudioBuffer : " + audioUrl);
-	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
-	var auth = "d0b71067ea78687d521aee42de4ec159";
-	var options = {
-		host: 'api.twilio.com',
-		port: 443,
-		path: audioUrl,
-		method: 'GET',
-		auth: sid + ":" + auth,
-		agent: false
-	};
-	https.get(options, function (res) {
-			var data = [];
-
-			res.on('data', function (chunk) {
-				data.push(chunk);
-			}).on('end', function () {
-				//at this point data is an array of Buffers
-				//so Buffer.concat() can make us a new Buffer
-				//of all of them together
-				var buffer = Buffer.concat(data);
-				// console.log("------------------ buffer   --------------- ");
-				// console.log(buffer.toString());
-				callAmazonLex(event, callback, buffer);
-			});
-		})
-		.on('error', (e) => {
-			respond(callback, `<Say>${e}</Say><Redirect></Redirect>`);
-		});
-
+const callAmazonLex = (event, callback, speach) => {
+	params.inputStream = speach;
+	respond(callback,
+		`<Play>${speach}</Play>
+		<Redirect />`);
+	// lexruntime.postContent(params, function (err, data) {
+	// 	if (err) {
+	// 		console.log("error Message", err.stack);
+	// 		const error = err.stack.trim();
+	// 		respond(callback, `<Say>Error from lex</Say><Redirect />`); // an error occurred
+	// 	} else {
+	// 		console.log('----------------------- Data BEGIN -----------------------');
+	// 		console.log("success message", data);
+	// 		console.log('----------------------- Data END -----------------------');
+	// 		respond(callback,
+	// 			`<Play>${speach}</Play><Say>${data.message}</Say>
+	// 			<Redirect />`);
+	// 	}
+	// });
 };
 const speatBegin = "we are waiting "; //"Please Speak."
 const recordVoice = (event, callback) => {
@@ -77,20 +57,24 @@ const recordVoice = (event, callback) => {
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
 	for (let i = 0; i < arrString.length; i++) {
-		if (arrString[i].includes("RecordingUrl")) {
+		if (arrString[i].includes("SpeechResult")) {
 			let findBegin = arrString[i].indexOf("=") + 1;
-			let url = arrString[i].slice(findBegin);
-			var tmpUrl = decodeURIComponent(url);
-			return getAudioBufferFromUrl(event, callback, tmpUrl);
+			let speach = arrString[i].slice(findBegin);
+			console.log(" -------------- speach --------------- ")
+			console.log(speach)
+			return callAmazonLex(event, callback, speach);
 		}
 	}
-	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" /><Redirect></Redirect>`);
+	respond(callback,
+		`<Gather input="speech" method="POST" numDigits="1" action="${API_URL}">
+			<Say>${speatBegin}</Say>
+		</Gather>`);
 };
 
 const main = (event, callback) => {
-	// console.log('------------------ BEGIN ----------------------   ');
-	// console.log(event);
-	// console.log('------------------ END   ----------------------   ');
+	console.log('------------------ BEGIN ----------------------   ');
+	console.log(event);
+	console.log('------------------ END   ----------------------   ');
 	recordVoice(event, callback);
 };
 
