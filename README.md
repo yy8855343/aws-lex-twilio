@@ -17,6 +17,7 @@ C:\Python27\Scripts\pip.exe install awscli
 for detail
 https://github.com/aws/aws-cli
 
+```json
 Gramma(canot tested)
 aws polly synthesize-speech ^
     --region us-east-1 ^
@@ -53,3 +54,4 @@ aws lex-runtime post-content ^
     --content-type "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false" ^
     --input-stream tom1.wav ^
     IntentOutputSpeech.mpg
+```
