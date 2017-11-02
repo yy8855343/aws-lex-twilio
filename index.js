@@ -8,19 +8,19 @@ var lexruntime = new AWS.LexRuntime({
 });
 
 const respond = (callback, contents) => {
-	// console.log('--------------------------------- last ---------------------------------');
-	// console.log(contents);
-	// console.log('--------------------------------- last length--------- ' + contents.length);
+	console.log('--------------------------------- last ---------------------------------');
+	console.log(contents);
+	console.log('--------------------------------- last length--------- ' + contents.length);
 	callback(null,
-		`<?xml version="1.0" encoding="UTF-8"?><Response>${contents}</Response>`
+		`<?xml version="1.0" encoding="UTF-8"?>
+		<Response>
+			${contents}
+		</Response>`
 	)
 };
 
-// const contentType = "audio/l16; rate=16000; channels=1";
-// const contentType = "audio/x-l16; sample-rate=16000; channel-count=1";
-// const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
-// const contentType = "audio/x-cbr-opus-with-preamble; preamble-size=0; bit-rate=256000; frame-size-milliseconds=4";
 const contentType = "text/plain; charset=utf-8";
+
 var params = {
 	botAlias: 'blue',
 	contentType: contentType,
@@ -31,58 +31,73 @@ var params = {
 	sessionAttributes: {}
 };
 
-const callAmazonLex = (event, callback, speach) => {
-	params.inputStream = speach;
-	respond(callback,
-		`<Play>${speach}</Play>
-		<Redirect />`);
-	// lexruntime.postContent(params, function (err, data) {
-	// 	if (err) {
-	// 		console.log("error Message", err.stack);
-	// 		const error = err.stack.trim();
-	// 		respond(callback, `<Say>Error from lex</Say><Redirect />`); // an error occurred
-	// 	} else {
-	// 		console.log('----------------------- Data BEGIN -----------------------');
-	// 		console.log("success message", data);
-	// 		console.log('----------------------- Data END -----------------------');
-	// 		respond(callback,
-	// 			`<Play>${speach}</Play><Say>${data.message}</Say>
-	// 			<Redirect />`);
-	// 	}
-	// });
-};
-const speatBegin = "we are waiting "; //"Please Speak."
-const recordVoice = (event, callback) => {
+function getSpeech(speech){ //speech includes "." in the end at some case.  eg: Hi.
+	var index = speech.indexOf(".");
+	var result = "";
+	if(index == -1)
+		result = speech;
+	else
+		result = speech.substr(0, speech.length - 1);
+	result = result.replace(/[+]/g, ' ');
+	
+	return result.toLowerCase();
+}
 
+const callAmazonLex = (event, callback, speech) => {
+    var inputStream = getSpeech(speech);
+	params.inputStream = inputStream;
+	console.log("Speech=" + inputStream);
+	lexruntime.postContent(params, function (err, data) {
+		if (err) {
+			console.log("error Message", err.stack);
+			respond(callback, `<Say>${err.stack}</Say><Redirect />`); // an error occurred
+		} else {
+			console.log('----------------------- Data BEGIN -----------------------');
+			console.log("success message", data);
+			console.log('----------------------- Data END -----------------------');
+			respond(callback,
+				`<Gather input="speech" timeout="3" action="${API_URL}">
+				<Say>${data.message}</Say>
+				</Gather>
+				<Redirect />
+				`);
+		}
+	});
+};
+
+const main = (event, callback) => {
+	console.log('------------------ BEGIN ----------------------   ');
+	console.log(JSON.stringify(event));
+	console.log('------------------ END   ----------------------   ');
+	let speech =  '';
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
 	for (let i = 0; i < arrString.length; i++) {
 		if (arrString[i].includes("SpeechResult")) {
 			let findBegin = arrString[i].indexOf("=") + 1;
-			let speach = arrString[i].slice(findBegin);
-			console.log(" -------------- speach --------------- ")
-			console.log(speach)
-			return callAmazonLex(event, callback, speach);
+			speech = arrString[i].slice(findBegin);
+			console.log("------------------------ Speak -------------------------- ")
+		    console.log(speech)
+			console.log("------------------------ Speak -------------------------- ")
+			
+			return callAmazonLex(event, callback, speech);
 		}
 	}
-	respond(callback,
-		`<Gather input="speech" method="POST" numDigits="1" action="${API_URL}">
-			<Say>${speatBegin}</Say>
-		</Gather>`);
-};
 
-const main = (event, callback) => {
-	console.log('------------------ BEGIN ----------------------   ');
-	console.log(event);
-	console.log('------------------ END   ----------------------   ');
-	recordVoice(event, callback);
+	var waiting = "we are waiting";
+	respond(callback,
+		`<Gather input="speech" timeout="3" action="${API_URL}">
+			<Say>${waiting}</Say>
+		</Gather>
+		<Redirect />
+		`);
 };
 
 exports.handler = (event, context, callback) => {
 	try {
 		main(event, callback);
 	} catch (e) {
-		console.error(e);
+		console.error("MainError=" + e);
 		return respond(callback, '<Say>Some Error Occur at Lambda function</Say>');
 	}
 };

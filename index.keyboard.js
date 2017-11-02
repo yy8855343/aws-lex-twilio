@@ -11,16 +11,38 @@ const respond = (callback, contents) => {
 	)
 };
 
+function getRequestDigits(event) {
+	try {
+		const params = event["params"] || {};
+		const querystring = params["querystring"] || {};
+		const requestType = querystring["Digits"] + "";
+		if (requestType == null || requestType == undefined || requestType == "undefined") requestType = "";
+		return requestType;
+	} catch (e) {
+		console.log("get request type catch");
+		console.log(e);
+		return "";
+	}
+}
+
 const speatFor_one = "You press 1, please say Hi";
 const speatFor_two = "You press 2, please wait ";
 const phoneNumber = "415-123-4567";
 
 const main = (event, callback) => {
-
+	const requestType = getRequestDigits(event);
 	console.log('------------------ BEGIN ----------------------   ');
 	console.log(event);
+	console.log(requestType);
 	console.log('------------------ END   ----------------------   ');
-
+	if (requestType == "1") {
+		return respond(callback, `
+		<Gather input="speech" timeout="3" action="${API_URL}">
+			<Say>${speatFor_one}</Say>
+		</Gather>
+		<Redirect>${API_URL_SELF}?Digits=1</Redirect>
+		`);
+	}
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
 	for (let i = 0; i < arrString.length; i++) {
@@ -33,6 +55,7 @@ const main = (event, callback) => {
 					<Gather input="speech" timeout="3" action="${API_URL}">
 						<Say>${speatFor_one}</Say>
 					</Gather>
+					<Redirect>${API_URL_SELF}?Digits=1</Redirect>
 					`);
 				//--------- <Record action="${API_URL}" timeout="3"/>
 			}
@@ -47,8 +70,7 @@ const main = (event, callback) => {
 			<Say>Hi</Say>
 			<Pause length="1" />
 			<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
-		</Gather>
-		<Redirect />`);
+		</Gather>`);
 };
 
 exports.handler = (event, context, callback) => {
