@@ -12,9 +12,9 @@ http://entrepreneursunited.io/app/OpenVBX/vbx/devices
 
 aws-cli install
 
-install python,
-C:\Python27\Scripts\pip.exe install awscli
-for detail
+install python,<br>
+C:\Python27\Scripts\pip.exe install awscli<br>
+for detail<br>
 https://github.com/aws/aws-cli
 
 ```json
