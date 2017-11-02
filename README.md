@@ -10,15 +10,23 @@ https://www.twilio.com/blog/2015/09/build-your-own-ivr-with-aws-lambda-amazon-ap
 
 http://entrepreneursunited.io/app/OpenVBX/vbx/devices
 
-Gramma
+aws-cli install
+
+install python,
+C:\Python27\Scripts\pip.exe install awscli
+for detail
+https://github.com/aws/aws-cli
+
+Gramma(canot tested)
 aws polly synthesize-speech ^
     --region us-east-1 ^
-    --endpoint endpoint ^
+    --endpoint endpoint ^                        what is means?
     --output-format pcm ^
     --text "i would like to order flowers" ^
     --voice-id "Kendra" ^
     IntentSpeech.mpg
 
+(text to audio file(mpg))
 aws polly synthesize-speech ^
     --region us-east-1 ^
     --output-format pcm ^
@@ -26,15 +34,7 @@ aws polly synthesize-speech ^
     --voice-id "Kendra" ^
     IntentSpeech.mpg
 
-aws lex-runtime post-content ^
-    --region us-east-1 ^
-    --bot-name Bookappointment ^
-    --bot-alias "blue" ^
-    --user-id wyumpkwy84e5ka8r79hymiqsyk5l2cqj ^
-    --content-type "audio/l16; rate=16000; channels=1" ^
-    --input-stream hi.wav ^
-    IntentOutputSpeech.mpg
-
+call aws lex function with audio(hi.wav) file       hi
 aws lex-runtime post-content ^
     --region us-east-1 ^
     --bot-name Bookappointment ^
@@ -44,7 +44,7 @@ aws lex-runtime post-content ^
     --input-stream hi.wav ^
     IntentOutputSpeech.mpg
 
-
+call aws lex function with audio(tom1.wav) file      tomorrow
 aws lex-runtime post-content ^
     --region us-east-1 ^
     --bot-name Bookappointment ^
