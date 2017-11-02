@@ -2,110 +2,107 @@
 const API_URL = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioBlueprintHook";
 const https = require('https');
 var AWS = require('aws-sdk');
-
 var lexruntime = new AWS.LexRuntime({
 	apiVersion: '2016-11-28'
 });
-
-var sessionAttributes = {};
 
 const respond = (callback, contents) => {
 	console.log('--------------------------------- last ---------------------------------');
 	console.log(contents);
 	console.log('--------------------------------- last length--------- ' + contents.length);
 	callback(null,
-		`<?xml version="1.0" encoding="UTF-8"?>
-		<Response>
-			${contents}
-		</Response>`
+		`<?xml version="1.0" encoding="UTF-8"?><Response>${contents}</Response>`
 	)
 };
-
-const contentType = "text/plain; charset=utf-8";
-
+// const contentType = "audio/l16; rate=16000; channels=1";
+// const contentType = 'audio/x-l16; sample-rate=16000';
+const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
+// const contentType = "audio/x-cbr-opus-with-preamble; preamble-size=0; bit-rate=256000; frame-size-milliseconds=4";
 var params = {
 	botAlias: 'blue',
 	contentType: contentType,
 	botName: 'Bookappointment', //'Bookappointment',
 	accept: "text/plain; charset=utf-8",
 	userId: 'wyumpkwy84e5ka8r79hymiqsyk5l2cqj',
+	requestAttributes: {},
+	sessionAttributes: {}
 };
 
-function getSpeech(speech) { //speech includes "." in the end at some case.  eg: Hi.
-	var index = speech.indexOf(".");
-	var result = "";
-	if (index == -1)
-		result = speech;
-	else
-		result = speech.substr(0, speech.length - 1);
-	result = result.replace(/[+]/g, ' ');
-	if (speech == "komodo" || speech == "thomas") result = "tomorrow"
-
-	return result.toLowerCase();
-}
-
-const callAmazonLex = (event, callback, speech) => {
-	var inputStream = getSpeech(speech);
-	params.inputStream = inputStream;
-	console.log("Speech=" + inputStream);
+const callAmazonLex = (event, callback, buffer) => {
+	params.inputStream = buffer;
 	lexruntime.postContent(params, function (err, data) {
 		if (err) {
 			console.log("error Message", err.stack);
 			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
 		} else {
-			var dialogState = data.dialogState;
-			if (dialogState == 'Fulfilled') {
-				respond(callback,
-					`<Say>${data.message}</Say>
-				<Hangup />
-				`);
-			} else {
-				sessionAttributes = data.sessionAttributes || {};
-				console.log('----------------------- Data BEGIN -----------------------');
-				console.log("success message", data);
-				console.log('----------------------- Data END -----------------------');
-				respond(callback,
-					`<Gather input="speech dtmf" timeout="12" action="${API_URL}"><Say>${data.message}</Say></Gather><Redirect />
-					`);
-			}
+			console.log("success message", data.message);
+			respond(callback, `<Say>${data.message}</Say><Redirect></Redirect>`);
 		}
 	});
 };
+const getAudioBufferFromUrl = (event, callback, audioUrl) => {
+	console.log("Called GetAudioBuffer : " + audioUrl);
+	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
+	var auth = "d0b71067ea78687d521aee42de4ec159";
+	var options = {
+		host: 'api.twilio.com',
+		port: 443,
+		path: audioUrl,
+		method: 'GET',
+		auth: sid + ":" + auth,
+		agent: false
+	};
+	https.get(audioUrl, function (res) {
+			var data = [];
+			var length = 0;
+			res.on('data', function (chunk) {
+				console.log("------------------ download data  BEGIN --------------- ");
 
-const main = (event, callback) => {
-	console.log('------------------ BEGIN ----------------------   ');
-	console.log(JSON.stringify(event));
-	console.log('------------------ END   ----------------------   ');
-	console.log('sessionAttributes=' + JSON.stringify(sessionAttributes));
-	let speech = "";
+				console.log(chunk)
+				console.log("------------------ download data  END --------------- ");
+				data.push(chunk);
+				callAmazonLex(event, callback, chunk);
+			}).on('end', function () {
+				// var trans = transform(data, data.length);
+				var buffer = Buffer.concat(data);
+				console.log("------------------ buffer   --------------- ");
+				console.log(buffer);
+				// callAmazonLex(event, callback, buffer);
+			});
+		})
+		.on('error', (e) => {
+			respond(callback, `<Say>${e}</Say><Redirect></Redirect>`);
+		});
+
+};
+const speatBegin = "we are waiting "; //"Please Speak."
+const recordVoice = (event, callback) => {
+
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
 	for (let i = 0; i < arrString.length; i++) {
-		if (arrString[i].includes("SpeechResult")) {
+		if (arrString[i].includes("RecordingUrl")) {
 			let findBegin = arrString[i].indexOf("=") + 1;
-			speech = arrString[i].slice(findBegin);
-			return callAmazonLex(event, callback, speech);
+			let url = arrString[i].slice(findBegin);
+			var tmpUrl = decodeURIComponent(url);
+			return getAudioBufferFromUrl(event, callback, tmpUrl);
 		}
 	}
-	//console.log('ssssssssssssssss=' + speech);
-	//if(speech != "")
-	//callAmazonLex(event, callback, speech);
-	//recordVoice(event, callback);
+	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" trim="do-not-trim" /><Redirect></Redirect>`);
+};
 
-	var waiting = "we are waiting"
-	respond(callback,
-		`<Gather input="speech" timeout="3" action="${API_URL}">
-			<Say>${waiting}</Say>
-		</Gather>
-		<Redirect />
-		`);
+const main = (event, callback) => {
+	// console.log('------------------ BEGIN ----------------------   ');
+	// console.log(event);
+	// console.log('------------------ END   ----------------------   ');
+	recordVoice(event, callback);
 };
 
 exports.handler = (event, context, callback) => {
 	try {
 		main(event, callback);
 	} catch (e) {
-		console.error("MainError=" + e);
+		console.error(e);
 		return respond(callback, '<Say>Some Error Occur at Lambda function</Say>');
 	}
 };

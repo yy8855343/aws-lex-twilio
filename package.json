@@ -13,8 +13,9 @@
     "url": "https://github.com/nkhs/aws-lex-twilio.git"
   },
   "dependencies": {
-    "aws-sdk": "^2.39.0",
+    "aws-sdk": "^2.142.0",
     "qs": "^6.3.1",
+    "request": "^2.83.0",
     "twilio": "^2.11.1",
     "wav-file-info": "0.0.8"
   }
