@@ -15,6 +15,7 @@
   "dependencies": {
     "aws-sdk": "^2.39.0",
     "qs": "^6.3.1",
-    "twilio": "^2.11.1"
+    "twilio": "^2.11.1",
+    "wav-file-info": "0.0.8"
   }
 }

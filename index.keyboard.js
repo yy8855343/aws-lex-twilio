@@ -15,7 +15,7 @@ function getRequestDigits(event) {
 	try {
 		const params = event["params"] || {};
 		const querystring = params["querystring"] || {};
-		const requestType = querystring["Digits"] + "";
+		var requestType = querystring["Digits"] + "";
 		if (requestType == null || requestType == undefined || requestType == "undefined") requestType = "";
 		return requestType;
 	} catch (e) {
@@ -35,42 +35,36 @@ const main = (event, callback) => {
 	console.log(event);
 	console.log(requestType);
 	console.log('------------------ END   ----------------------   ');
-	if (requestType == "1") {
-		return respond(callback, `
-		<Gather input="speech" timeout="3" action="${API_URL}">
-			<Say>${speatFor_one}</Say>
-		</Gather>
-		<Redirect>${API_URL_SELF}?Digits=1</Redirect>
-		`);
-	}
+
+
+	// if (requestType == "1") {
+	// 	return respond(callback, `
+	// 	<Gather input="speech" timeout="3" action="${API_URL}">
+	// 		<Say>${speatFor_one}</Say>
+	// 	</Gather>
+	// 	<Redirect>${API_URL_SELF}?Digits=1</Redirect>
+	// 	`);
+	// }
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
-	for (let i = 0; i < arrString.length; i++) {
 
-		// User press Keyboard
-		if (arrString[i].includes("Digits")) {
-			let keyboard = arrString[i].slice(-1);
-			if (keyboard == "1") {
-				return respond(callback, `
-					<Gather input="speech" timeout="3" action="${API_URL}">
-						<Say>${speatFor_one}</Say>
-					</Gather>
-					<Redirect>${API_URL_SELF}?Digits=1</Redirect>
-					`);
-				//--------- <Record action="${API_URL}" timeout="3"/>
-			}
-			if (keyboard == "2") {
-				return respond(callback,
-					`<Say>${speatFor_two}</Say><Dial timeout="10">${phoneNumber}</Dial>`);
-			}
+	// User press Keyboard
+	for (let i = 0; i < arrString.length; i++) {
+		if (arrString[i].includes("RecordingUrl")) {
+			let findBegin = arrString[i].indexOf("=") + 1;
+			let url = arrString[i].slice(findBegin);
+			var tmpUrl = decodeURIComponent(url);
+			return respond(callback, `<Play>${tmpUrl}</Play><Redirect />`);
 		}
 	}
-	return respond(callback,
-		`<Gather input="dtmf" numDigits="1" action="${API_URL_SELF}">
-			<Say>Hi</Say>
-			<Pause length="1" />
-			<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
-		</Gather>`);
+	respond(callback, `<Say>Please Speak. </Say><Record action="${API_URL_SELF}?type=record" /><Redirect />`);
+	// return respond(callback,
+	// 	`<Gather input="dtmf" numDigits="1" action="${API_URL_SELF}">
+	// 		<Say>Hi</Say>
+	// 		<Pause length="1" />
+	// 		<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
+	// 	</Gather>`);
+
 };
 
 exports.handler = (event, context, callback) => {
