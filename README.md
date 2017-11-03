@@ -57,19 +57,30 @@ aws lex-runtime post-content ^
 ```
 
 what day would you like to come in?
+
 tomorrow, 
+
 October twenty nine( 10.29)
 
+
 Would you like to come in morning or evening?
+
 Morning
 
+
 8:20 AM is available now. Does that work for you?
+
 Yes
 
+
 Ok great, What is your FirstName?
+
 John
 
+
 What is your PhoneNumber? Please just type in your number on your phone
+
 12312323422
+
 
 Okay, I have booked your appointment. We will see you at 8:20 AM on 2017-10-29
