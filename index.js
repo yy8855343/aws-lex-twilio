@@ -1,6 +1,5 @@
 'use strict';
 const API_URL = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioBlueprintHook";
-const https = require('https');
 var request = require("request");
 
 var AWS = require('aws-sdk');
@@ -9,9 +8,8 @@ var lexruntime = new AWS.LexRuntime({
 });
 
 const respond = (callback, contents) => {
-	console.log('--------------------------------- last ---------------------------------');
-	console.log(contents);
-	console.log('--------------------------------- last length--------- ' + contents.length);
+	// console.log('--------------------------------- last ---------------------------------');
+	// console.log(contents);
 	callback(null,
 		`<?xml version="1.0" encoding="UTF-8"?><Response>${contents}</Response>`
 	)
@@ -30,21 +28,31 @@ var params = {
 	sessionAttributes: {}
 };
 
-const callAmazonLex = (event, callback, buffer) => {
+const callAmazonLex = (event, callback, buffer, audioUrl) => {
 	params.inputStream = buffer;
 	lexruntime.postContent(params, function (err, data) {
+		console.log('==================== From Lex ===================')
+		console.log(data, err);
 		if (err) {
 			console.log("error Message", err.stack);
-			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
+			respond(callback, `<Say>Lamda api postContent have errors</Say><Redirect></Redirect>`); // an error occurred
 		} else {
-			console.log("success message", data.message);
-			respond(callback, `<Say>${data.message}</Say><Redirect></Redirect>`);
+			var dialogState = data.dialogState;
+			if (dialogState == 'Fulfilled') {
+				return respond(callback,
+					`<Say>${data.message}</Say>
+					 <Hangup />
+					`);
+			}
+			respond(callback, `<Play>${audioUrl}</Play><Say>${data.message}</Say><Redirect></Redirect>`);
+
+
 		}
 	});
 };
 const getAudioBufferFromUrl = (event, callback, audioUrl) => {
-
-	console.log("Called GetAudioBuffer : " + audioUrl);
+	console.log('==================== Audio url ===================')
+	console.log(audioUrl);
 	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
 	var auth = "d0b71067ea78687d521aee42de4ec159";
 	var requestOptions = {
@@ -59,22 +67,52 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 	};
 	request.get(requestOptions,
 		function (error, response, body) {
+			console.log("============================== DOWNLOAD ========================");
+			console.log(error, response.statusCode, "body.length", body.length, 'typeof body', typeof body);
 			if (!error && response.statusCode == 200) {
-				console.log("downloaded ", typeof body, body.length);
-				
-				lexFunc(req, res, body);
-				callAmazonLex(event, callback, body);
+				callAmazonLex(event, callback, body, audioUrl);
 			} else {
-			    console.log("Error" + error);
 				respond(callback, `<Say>Error while download wav file</Say><Redirect></Redirect>`);
 			}
 		});
 };
 const speatBegin = "we are waiting "; //"Please Speak."
+
+function getParam(event, parameter) {
+	try {
+		const bodyJson = event["body-json"] + "";
+		const arrString = bodyJson.split('&') || [];
+		for (let i = 0; i < arrString.length; i++) {
+			if (arrString[i].includes(parameter)) {
+				let findBegin = arrString[i].indexOf("=") + 1;
+				let url = arrString[i].slice(findBegin);
+				if (parameter == "RecordingUrl") return decodeURIComponent(url);
+				return url;
+			}
+		}
+	} catch (e) {
+		console.log("get request type catch");
+		console.log(e);
+	}
+	return "";
+}
+
 const recordVoice = (event, callback) => {
 
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
+
+	const RecordingStatus = getParam(event, "RecordingStatus");
+	console.log("============================== RecordingStatus ========================");
+	console.log(RecordingStatus);
+
+	const RecordingDuration = getParam(event, "RecordingDuration");
+	console.log("============================== RecordingDuration ========================");
+	console.log(RecordingDuration);
+	// const RecordingUrl = getParam(event, "RecordingUrl");
+	// console.log("============================== RecordingUrl ========================");
+	// console.log(RecordingUrl);
+
 	for (let i = 0; i < arrString.length; i++) {
 		if (arrString[i].includes("RecordingUrl")) {
 			let findBegin = arrString[i].indexOf("=") + 1;
@@ -83,7 +121,7 @@ const recordVoice = (event, callback) => {
 			return getAudioBufferFromUrl(event, callback, tmpUrl);
 		}
 	}
-	respond(callback, `<Say>${speatBegin}</Say><Record recordingStatusCallback="${API_URL}"/><Redirect></Redirect>`);
+	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" trim="do-not-trim" timeout="2" /><Redirect></Redirect>`);
 };
 
 const main = (event, callback) => {

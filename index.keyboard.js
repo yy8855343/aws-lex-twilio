@@ -42,8 +42,8 @@ const callAmazonWithHi = (event, callback) => {
 			console.log("success message", data);
 			console.log('----------------------- Data END -----------------------');
 			respond(callback,
-				`<Say>Lambda result </Say><Say>${data.message}</Say>
-				<Redirect>${API_URL}?Digits=1</Redirect>
+				`<Say>${data.message}</Say>
+				<Redirect>${API_URL}</Redirect>
 				`);
 		}
 	});
@@ -65,16 +65,16 @@ function getRequestDigits(event) {
 
 const main = (event, callback) => {
 
-	const requestType = getRequestDigits(event);
+	// const requestType = getRequestDigits(event);
 	console.log('------------------ BEGIN ----------------------   ');
 	console.log(event);
-	console.log(requestType);
+	// console.log(requestType);
 	console.log('------------------ END   ----------------------   ');
-	if (requestType == "1") {
-		return respond(callback, `
-		<Redirect>${API_URL}?Digits=1</Redirect>
-		`);
-	}
+	// if (requestType == "1") {
+	// 	return respond(callback, `
+	// 	<Redirect>${API_URL}?Digits=1</Redirect>
+	// 	`);
+	// }
 
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
