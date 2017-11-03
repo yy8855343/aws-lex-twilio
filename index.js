@@ -1,6 +1,8 @@
 'use strict';
 const API_URL = "https://bss558zedf.execute-api.us-east-1.amazonaws.com/prod/twilioBlueprintHook";
 const https = require('https');
+var request = require("request");
+
 var AWS = require('aws-sdk');
 var lexruntime = new AWS.LexRuntime({
 	apiVersion: '2016-11-28'
@@ -41,39 +43,32 @@ const callAmazonLex = (event, callback, buffer) => {
 	});
 };
 const getAudioBufferFromUrl = (event, callback, audioUrl) => {
+
 	console.log("Called GetAudioBuffer : " + audioUrl);
 	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
 	var auth = "d0b71067ea78687d521aee42de4ec159";
-	var options = {
+	var requestOptions = {
 		host: 'api.twilio.com',
 		port: 443,
 		path: audioUrl,
+		url: audioUrl,
+		encoding: null,
 		method: 'GET',
-		auth: sid + ":" + auth,
+		//auth: sid + ":" + auth,
 		agent: false
 	};
-	https.get(audioUrl, function (res) {
-			var data = [];
-			var length = 0;
-			res.on('data', function (chunk) {
-				console.log("------------------ download data  BEGIN --------------- ");
-
-				console.log(chunk)
-				console.log("------------------ download data  END --------------- ");
-				data.push(chunk);
-				callAmazonLex(event, callback, chunk);
-			}).on('end', function () {
-				// var trans = transform(data, data.length);
-				var buffer = Buffer.concat(data);
-				console.log("------------------ buffer   --------------- ");
-				console.log(buffer);
-				// callAmazonLex(event, callback, buffer);
-			});
-		})
-		.on('error', (e) => {
-			respond(callback, `<Say>${e}</Say><Redirect></Redirect>`);
+	request.get(requestOptions,
+		function (error, response, body) {
+			if (!error && response.statusCode == 200) {
+				console.log("downloaded ", typeof body, body.length);
+				
+				lexFunc(req, res, body);
+				callAmazonLex(event, callback, body);
+			} else {
+			    console.log("Error" + error);
+				respond(callback, `<Say>Error while download wav file</Say><Redirect></Redirect>`);
+			}
 		});
-
 };
 const speatBegin = "we are waiting "; //"Please Speak."
 const recordVoice = (event, callback) => {
@@ -88,7 +83,7 @@ const recordVoice = (event, callback) => {
 			return getAudioBufferFromUrl(event, callback, tmpUrl);
 		}
 	}
-	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" trim="do-not-trim" /><Redirect></Redirect>`);
+	respond(callback, `<Say>${speatBegin}</Say><Record recordingStatusCallback="${API_URL}"/><Redirect></Redirect>`);
 };
 
 const main = (event, callback) => {
