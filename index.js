@@ -66,7 +66,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 		console.log(data, err);
 		if (err) {
 			console.log("error Message", err.stack);
-			respond(callback, `<Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`); // an error occurred
+			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
@@ -111,7 +111,7 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 				callAmazonLex(event, callback, body, audioUrl);
 			} else {
 				var sessionAttributes = encodeURIComponent(getRequestSession(event));
-				respond(callback, `<Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
+				respond(callback, `<Say>audio download error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
 			}
 		});
 };
