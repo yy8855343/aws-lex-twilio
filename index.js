@@ -8,16 +8,27 @@ var lexruntime = new AWS.LexRuntime({
 });
 
 const respond = (callback, contents) => {
-	// console.log('--------------------------------- last ---------------------------------');
-	// console.log(contents);
 	callback(null,
 		`<?xml version="1.0" encoding="UTF-8"?><Response>${contents}</Response>`
 	)
 };
-// const contentType = "audio/l16; rate=16000; channels=1";
-// const contentType = 'audio/x-l16; sample-rate=16000';
+
+function getRequestSession(event) {
+	try {
+		const params = event["params"] || {};
+		const querystring = params["querystring"] || {};
+		var requestType = querystring["SessionAttr"] + "";
+		if (requestType === null || requestType === undefined || requestType === "undefined") requestType = "";
+		return decodeURIComponent(requestType);
+	} catch (e) {
+		console.log("get request type catch");
+		console.log(e);
+		return "";
+	}
+	return "";
+}
+
 const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
-// const contentType = "audio/x-cbr-opus-with-preamble; preamble-size=0; bit-rate=256000; frame-size-milliseconds=4";
 var params = {
 	botAlias: 'blue',
 	contentType: contentType,
@@ -29,30 +40,57 @@ var params = {
 };
 
 const callAmazonLex = (event, callback, buffer, audioUrl) => {
+
+	const RecordingStatus = getParam(event, "RecordingStatus");
+	const RecordingDuration = getParam(event, "RecordingDuration");
+	const RecordingUrl = getParam(event, "RecordingUrl");
+	const Caller = getParam(event, "CallSid");
+	
+	params.userId = Caller;
 	params.inputStream = buffer;
+	var sessionAttributes = getRequestSession(event);
+
+	console.log("Session=", sessionAttributes);
+	if(sessionAttributes=="")
+		params.sessionAttributes = {};
+	else{
+		params.sessionAttributes = JSON.parse(sessionAttributes);
+	}
+	
+	console.log("Event=", event);
+	console.log("Params=", params.userId, RecordingStatus, RecordingDuration,  RecordingUrl);
+
+
 	lexruntime.postContent(params, function (err, data) {
-		console.log('==================== From Lex ===================')
+		console.log('-------------------------------------------- From Lex --------------------------------------------')
 		console.log(data, err);
 		if (err) {
 			console.log("error Message", err.stack);
-			respond(callback, `<Say>Lamda api postContent have errors</Say><Redirect></Redirect>`); // an error occurred
+			respond(callback, `<Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`); // an error occurred
 		} else {
+			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
+			var message = data.message;
+			console.log("inputTranscript", inputTranscript)
+			console.log("message        ", message);
+
 			if (dialogState == 'Fulfilled') {
 				return respond(callback,
 					`<Say>${data.message}</Say>
 					 <Hangup />
 					`);
 			}
-			respond(callback, `<Play>${audioUrl}</Play><Say>${data.message}</Say><Redirect></Redirect>`);
-
-
+			var sessionAttributes = "";
+			if(sessionAttributes!= {})
+				sessionAttributes = JSON.stringify(data.sessionAttributes);
+			sessionAttributes = encodeURIComponent(sessionAttributes);
+			console.log("SSSS=", sessionAttributes);
+			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
 		}
 	});
 };
+
 const getAudioBufferFromUrl = (event, callback, audioUrl) => {
-	console.log('==================== Audio url ===================')
-	console.log(audioUrl);
 	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
 	var auth = "d0b71067ea78687d521aee42de4ec159";
 	var requestOptions = {
@@ -65,14 +103,15 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 		//auth: sid + ":" + auth,
 		agent: false
 	};
+	console.log("AudioUrl=", audioUrl);
 	request.get(requestOptions,
 		function (error, response, body) {
-			console.log("============================== DOWNLOAD ========================");
-			console.log(error, response.statusCode, "body.length", body.length, 'typeof body', typeof body);
+			console.log("download success", !error && response.statusCode == 200);
 			if (!error && response.statusCode == 200) {
 				callAmazonLex(event, callback, body, audioUrl);
 			} else {
-				respond(callback, `<Say>Error while download wav file</Say><Redirect></Redirect>`);
+				var sessionAttributes = encodeURIComponent(getRequestSession(event));
+				respond(callback, `<Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
 			}
 		});
 };
@@ -100,18 +139,8 @@ function getParam(event, parameter) {
 const recordVoice = (event, callback) => {
 
 	const bodyJson = event["body-json"] + "";
-	const arrString = bodyJson.split('&') || [];
-
-	const RecordingStatus = getParam(event, "RecordingStatus");
-	console.log("============================== RecordingStatus ========================");
-	console.log(RecordingStatus);
-
-	const RecordingDuration = getParam(event, "RecordingDuration");
-	console.log("============================== RecordingDuration ========================");
-	console.log(RecordingDuration);
-	// const RecordingUrl = getParam(event, "RecordingUrl");
-	// console.log("============================== RecordingUrl ========================");
-	// console.log(RecordingUrl);
+	console.log("BodyJson(recordVoice)=" + bodyJson)
+	const arrString = bodyJson.split('&') || [];	
 
 	for (let i = 0; i < arrString.length; i++) {
 		if (arrString[i].includes("RecordingUrl")) {
@@ -121,12 +150,16 @@ const recordVoice = (event, callback) => {
 			return getAudioBufferFromUrl(event, callback, tmpUrl);
 		}
 	}
-	respond(callback, `<Say>${speatBegin}</Say><Record action="${API_URL}" trim="do-not-trim" timeout="2" /><Redirect></Redirect>`);
+
+	var sessionAttributes = encodeURIComponent(getRequestSession(event));
+
+	respond(callback, `<Record action="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {
-	// console.log('------------------ BEGIN ----------------------   ');
-	// console.log(event);
+	console.log('**********************************************   BEGIN  ************************************************');
+	console.log('********************************************************************************************************');
+
 	// console.log('------------------ END   ----------------------   ');
 	recordVoice(event, callback);
 };

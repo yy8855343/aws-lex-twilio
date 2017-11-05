@@ -163,7 +163,7 @@ function getAvailabilities(onSuccess, date, intentRequest, callback) {
         if (err) {
             console(err);
         } else {
-            //console.log(body);
+            console.log("getAvailabilities[request]:"+body);
             onSuccess(body, date, intentRequest, callback);
         }
     });
@@ -404,8 +404,14 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
     });
 }
 
+function convertDate(date){
+    if(!date)
+        return null;
+    var currentDate = new Date();
+    return currentDate.getFullYear() + date.substr(4, date.length-4);
+}
 function makeAppointment_afterDay(intentRequest, callback) {
-    const date = intentRequest.currentIntent.slots.Date;
+    const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
@@ -422,7 +428,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
         slots.Date = null;
         callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                 contentType: 'PlainText',
-                content: 'I`m sorry, we are busy during that time frame. Please choose another day.'
+                content: 'I`m sorry, we  are busy during that time frame. Please choose another day.'
             },
             buildResponseCard('Specify Date', 'I`m sorry, we are busy during that time frame. Please choose another day.',
                 buildOptions('Date', date, null))));
@@ -451,10 +457,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
         for (let i = 0; i < length; i++) {
             let obj = tmp_array[i];
             let start_time_length = tmp_array[i].start_time.length;
-            let time = tmp_array[i].start_time.substring(start_time_length - 2, start_time_length);
-            if (time != apt) {
+            let time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
+            if (time != apt){
                 bookingAvailabilities.splice(bookingAvailabilities.indexOf(obj), 1);
-                console.log("Time=" + time + "///APT=" + apt + "Result=" + JSON.stringify(bookingAvailabilities));
+                console.log("Time="+time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
             }
         }
         if (bookingAvailabilities.length == 0) {
@@ -470,17 +476,18 @@ function makeAppointment_afterDay(intentRequest, callback) {
         }
     }
     //const appointmentTypeAvailabilities = getAvailabilitiesForDuration(getDuration(appointmentType), bookingAvailabilities);
+    console.log("Time=" + time);
     if (!time) {
         const time = bookingAvailabilities[0].start_time;
 
-        let messageContent = `${time} is available now, does that work for you?`;
+        let messageContent = `${time} is available now. Does that work for you?`;
         outputSessionAttributes.Time = time;
 
         callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                 contentType: 'PlainText',
-                content: `${time} is available now, does that work for you?`
+                content: `${time} is available now. Does that work for you?`
             },
-            buildResponseCard('Confirm Appointment', `${time} is available now, does that work for you?`, [{
+            buildResponseCard('Confirm Appointment', `${time} is available now. Does that work for you?`, [{
                 text: 'yes',
                 value: 'yes'
             }, {
@@ -522,9 +529,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
 
             callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                     contentType: 'PlainText',
-                    content: `${time} is available now, does that work for you?`
+                    content: `${time} is available now. Does that work for you?`
                 },
-                buildResponseCard('Confirm Appointment', `${time} is available now, does that work for you?`, [{
+                buildResponseCard('Confirm Appointment', `${time} is available now. Does that work for you?`, [{
                     text: 'yes',
                     value: 'yes'
                 }, {
@@ -538,9 +545,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
     if (firstName && !phoneNumber) {
         callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'PhoneNumber', {
                 contentType: 'PlainText',
-                content: 'What is your PhoneNumber? Please just type in your number on your phone'
+                content: 'What is your PhoneNumber?'
             },
-            buildResponseCard('Specify PhoneNumber', 'What is your PhoneNumber? Please just type in your number on your phone')));
+            buildResponseCard('Specify PhoneNumber', 'What is your PhoneNumber?')));
         return;
     }
     if (firstName && phoneNumber) {
@@ -564,7 +571,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
  */
 function makeAppointment(intentRequest, callback) {
 
-    const date = intentRequest.currentIntent.slots.Date;
+    const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
@@ -634,13 +641,13 @@ function makeAppointment(intentRequest, callback) {
  */
 function dispatch(intentRequest, callback) {
     // console.log(JSON.stringify(intentRequest, null, 2));
-    console.log(`dispatch userId=${intentRequest.userId}, intent=${intentRequest.currentIntent.name}`);
+    console.log(`dispatch userId=${intentRequest.userId}, intent=${intentRequest.currentIntent.name},
+    inputTranscript=${intentRequest.inputTranscript}`);
 
     const name = intentRequest.currentIntent.name;
 
     // Dispatch to your skill's intent handlers
     if (name === 'BrentwoodAppointment') {
-        console.log(intentRequest);
         return makeAppointment(intentRequest, callback);
     }
     throw new Error(`Intent with name ${name} not supported`);
@@ -649,7 +656,7 @@ function dispatch(intentRequest, callback) {
 // --------------- Main handler -----------------------
 
 function loggingCallback(response, originalCallback) {
-    console.log(JSON.stringify(response, null, 2));
+    console.log("loggingCallback:"+JSON.stringify(response, null, 2));
     originalCallback(null, response);
 }
 
@@ -660,7 +667,7 @@ exports.handler = (event, context, callback) => {
         // By default, treat the user request as coming from the America/New_York time zone.
         process.env.TZ = 'America/New_York';
         console.log(`event.bot.name=${event.bot.name}`);
-
+        console.log(`event=`+JSON.stringify(event));
         /**
          * Uncomment this if statement and populate with your Lex bot name and / or version as
          * a sanity check to prevent invoking this Lambda function from an undesired Lex bot or
