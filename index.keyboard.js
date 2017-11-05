@@ -20,24 +20,49 @@ const speatFor_one = "You press 1, please say Hi";
 const speatFor_two = "You press 2, please wait ";
 const phoneNumber = "415-123-4567";
 
+const contentType = "text/plain; charset=utf-8";
 
-const callAmazonWithHi = (event, callback) => {
-	const contentType = "text/plain; charset=utf-8";
+var params = {
+	botAlias: 'blue',
+	contentType: contentType,
+	botName: 'Bookappointment', //'Bookappointment',
+	accept: "text/plain; charset=utf-8",
+	userId: 'wyumpkwy84e5ka8r79hymiqsyk5l2cqj',
+};
 
-	var paramsText = {
-		botAlias: 'blue',
-		contentType: contentType,
-		botName: 'Bookappointment', //'Bookappointment',
-		accept: "text/plain; charset=utf-8",
-		userId: 'wyumpkwy84e5ka8r79hymiqsyk5l2cqj',
-	};
-	paramsText.inputStream = "hi";
+function getParam(event, parameter) {
+	try {
+		const bodyJson = event["body-json"] + "";
+		const arrString = bodyJson.split('&') || [];
+		for (let i = 0; i < arrString.length; i++) {
+			if (arrString[i].includes(parameter)) {
+				let findBegin = arrString[i].indexOf("=") + 1;
+				let url = arrString[i].slice(findBegin);
+				return url;
+			}
+		}
+	} catch (e) {
+		console.log("get request type catch");
+		console.log(e);
+	}
+	return "";
+}
 
-	lexruntime.postContent(paramsText, function (err, data) {
+const callAmazonLex = (event, callback) => {
+
+	var callerId = getParam(event, "CallSid");
+
+	params.userId = callerId;
+	params.inputStream = "hi";
+
+	console.log("CallerId=" + params.userId);
+
+	lexruntime.postContent(params, function (err, data) {
 		if (err) {
 			console.log("error Message", err.stack);
-			respond(callback, `<Say>The lex have some error</Say>`); // an error occurred
-		} else {
+			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
+		} else 
+		{
 			console.log('----------------------- Data BEGIN -----------------------');
 			console.log("success message", data);
 			console.log('----------------------- Data END -----------------------');
@@ -49,32 +74,12 @@ const callAmazonWithHi = (event, callback) => {
 	});
 };
 
-function getRequestDigits(event) {
-	try {
-		const params = event["params"] || {};
-		const querystring = params["querystring"] || {};
-		var requestType = querystring["Digits"] + "";
-		if (requestType === null || requestType === undefined || requestType === "undefined") requestType = "";
-		return requestType;
-	} catch (e) {
-		console.log("get request type catch");
-		console.log(e);
-		return "";
-	}
-}
 
 const main = (event, callback) => {
 
-	// const requestType = getRequestDigits(event);
 	console.log('------------------ BEGIN ----------------------   ');
 	console.log(event);
-	// console.log(requestType);
 	console.log('------------------ END   ----------------------   ');
-	// if (requestType == "1") {
-	// 	return respond(callback, `
-	// 	<Redirect>${API_URL}?Digits=1</Redirect>
-	// 	`);
-	// }
 
 	const bodyJson = event["body-json"] + "";
 	const arrString = bodyJson.split('&') || [];
@@ -84,7 +89,14 @@ const main = (event, callback) => {
 		if (arrString[i].includes("Digits")) {
 			let keyboard = arrString[i].slice(-1);
 			if (keyboard == "1") {
-				return callAmazonWithHi(event, callback);
+				return callAmazonLex(event, callback);
+				/*return respond(callback, `
+					<Gather input="speech dtmf" timeout="3" action="${API_URL}">
+						<Say>${speatFor_one}</Say>
+					</Gather>
+					<Redirect />
+					`);*/
+				//--------- <Record action="${API_URL}" timeout="3"/>
 			}
 			if (keyboard == "2") {
 				return respond(callback,
@@ -97,7 +109,8 @@ const main = (event, callback) => {
 			<Say>Hi</Say>
 			<Pause length="1" />
 			<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
-		</Gather>`);
+		</Gather>
+		<Redirect />`);
 };
 
 exports.handler = (event, context, callback) => {
