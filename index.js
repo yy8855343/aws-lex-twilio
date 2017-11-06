@@ -73,7 +73,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 		if (err) {
 			console.log("lexApiError=", err.stack);
 			var sessionAttributes_str_encode = encodeURIComponent(sessionAttributes_str);
-			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
+			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
@@ -92,7 +92,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 				sessionAttributes_str2 = JSON.stringify(data.sessionAttributes);
 			var sessionAttributes_str2_encode = encodeURIComponent(sessionAttributes_str2);
 			console.log("SSSS=", sessionAttributes_str2_encode);
-			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
+			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
 		}
 	});
 };
@@ -126,10 +126,12 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 				} else {
 					console.log("audioError=" + error + response.statusCode);
 					var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
-					respond(callback, `<Play>${audioUrl}</Play>
-								   <Pause length="1" />
-								   <Say>audio download error</Say>
-								   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes}</Redirect>`);
+					// respond(callback, `<Play>${audioUrl}</Play>
+					// 			   <Pause length="1" />
+					// 			   <Say>audio download error</Say>
+					// 			   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}</Redirect>`);
+					respond(callback, `
+								   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}</Redirect>`);
 				}
 			});
 	}, 300);
@@ -174,7 +176,7 @@ const recordVoice = (event, callback) => {
 	// http://docs.aws.amazon.com/lex/latest/dg/gl-limits.html
 	// https://www.twilio.com/docs/api/twiml/record
 	// Record Max Time => 15 second, 
-	respond(callback, `<Record action="${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
+	respond(callback, `<Record action="${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {
