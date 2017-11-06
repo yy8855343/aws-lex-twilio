@@ -13,7 +13,7 @@ const respond = (callback, contents) => {
 	)
 };
 
-function getRequestSession(event) {
+function getRequestSessionStr(event) {
 	try {
 		const params = event["params"] || {};
 		const querystring = params["querystring"] || {};
@@ -40,80 +40,85 @@ var params = {
 };
 
 const callAmazonLex = (event, callback, buffer, audioUrl) => {
+	const CallSid = getParam(event, "CallSid");
 
-	const RecordingStatus = getParam(event, "RecordingStatus");
-	const RecordingDuration = getParam(event, "RecordingDuration");
-	const RecordingUrl = getParam(event, "RecordingUrl");
-	const Caller = getParam(event, "CallSid");
-	
-	params.userId = Caller;
+	params.userId = CallSid;
 	params.inputStream = buffer;
-	var sessionAttributes = getRequestSession(event);
+	var sessionAttributes_str = getRequestSessionStr(event);
 
-	console.log("Session=", sessionAttributes);
-	if(sessionAttributes=="")
+	console.log("Session=", sessionAttributes_str);
+	if (sessionAttributes_str == "")
 		params.sessionAttributes = {};
-	else{
-		params.sessionAttributes = JSON.parse(sessionAttributes);
+	else {
+		params.sessionAttributes = JSON.parse(sessionAttributes_str);
 	}
-	
-	console.log("Event=", event);
-	console.log("Params=", params.userId, RecordingStatus, RecordingDuration,  RecordingUrl);
-
 
 	lexruntime.postContent(params, function (err, data) {
 		console.log('-------------------------------------------- From Lex --------------------------------------------')
 		console.log(data, err);
 		if (err) {
-			console.log("error Message", err.stack);
-			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`); // an error occurred
+			console.log("lexApiError=", err.stack);
+			var sessionAttributes_str_encode = encodeURIComponent(sessionAttributes_str);
+			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
 			var message = data.message;
-			console.log("inputTranscript", inputTranscript)
-			console.log("message        ", message);
+			console.log("inputTranscript=", inputTranscript)
+			console.log("________message=", message);
 
 			if (dialogState == 'Fulfilled') {
 				return respond(callback,
-					`<Say>${data.message}</Say>
+					`<Play>${audioUrl}</Play><Say>${data.message}</Say>
 					 <Hangup />
 					`);
 			}
-			var sessionAttributes = "";
-			if(sessionAttributes!= {})
-				sessionAttributes = JSON.stringify(data.sessionAttributes);
-			sessionAttributes = encodeURIComponent(sessionAttributes);
-			console.log("SSSS=", sessionAttributes);
-			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
+			var sessionAttributes_str2 = "";
+			if (data.sessionAttributes != {})
+				sessionAttributes_str2 = JSON.stringify(data.sessionAttributes);
+			var sessionAttributes_str2_encode = encodeURIComponent(sessionAttributes_str2);
+			console.log("SSSS=", sessionAttributes_str2_encode);
+			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
 		}
 	});
 };
 
 const getAudioBufferFromUrl = (event, callback, audioUrl) => {
-	var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
-	var auth = "d0b71067ea78687d521aee42de4ec159";
-	var requestOptions = {
-		host: 'api.twilio.com',
-		port: 443,
-		path: audioUrl,
-		url: audioUrl,
-		encoding: null,
-		method: 'GET',
-		//auth: sid + ":" + auth,
-		agent: false
-	};
-	console.log("AudioUrl=", audioUrl);
-	request.get(requestOptions,
-		function (error, response, body) {
-			console.log("download success", !error && response.statusCode == 200);
-			if (!error && response.statusCode == 200) {
-				callAmazonLex(event, callback, body, audioUrl);
-			} else {
-				var sessionAttributes = encodeURIComponent(getRequestSession(event));
-				respond(callback, `<Say>audio download error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
-			}
-		});
+	const RecordingStatus = getParam(event, "RecordingStatus");
+	const RecordingDuration = getParam(event, "RecordingDuration");
+	const RecordingUrl = getParam(event, "RecordingUrl");
+	const CallSid = getParam(event, "CallSid");
+
+	console.log("Event=", event);
+	console.log("RecordingStatus=", CallSid, RecordingDuration, RecordingStatus);
+	setTimeout(function () {
+		var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
+		var auth = "d0b71067ea78687d521aee42de4ec159";
+		var requestOptions = {
+			host: 'api.twilio.com',
+			port: 443,
+			path: audioUrl,
+			url: audioUrl,
+			encoding: null,
+			method: 'GET',
+			//auth: sid + ":" + auth,
+			agent: false
+		};
+		console.log("AudioUrl=", audioUrl);
+		request.get(requestOptions,
+			function (error, response, body) {
+				console.log("download success", !error && response.statusCode == 200);
+				if (!error && response.statusCode == 200) {
+					callAmazonLex(event, callback, body, audioUrl);
+				} else {
+					var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
+					respond(callback, `<Play>${audioUrl}</Play>
+								   <Pause length="1" />
+								   <Say>audio download error</Say>
+								   <Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
+				}
+			});
+	}, 300);
 };
 const speatBegin = "we are waiting "; //"Please Speak."
 
@@ -139,8 +144,8 @@ function getParam(event, parameter) {
 const recordVoice = (event, callback) => {
 
 	const bodyJson = event["body-json"] + "";
-	console.log("BodyJson(recordVoice)=" + bodyJson)
-	const arrString = bodyJson.split('&') || [];	
+	// console.log("BodyJson(recordVoice)=" + bodyJson)
+	const arrString = bodyJson.split('&') || [];
 
 	for (let i = 0; i < arrString.length; i++) {
 		if (arrString[i].includes("RecordingUrl")) {
@@ -151,9 +156,11 @@ const recordVoice = (event, callback) => {
 		}
 	}
 
-	var sessionAttributes = encodeURIComponent(getRequestSession(event));
-
-	respond(callback, `<Record action="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
+	var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
+	// http://docs.aws.amazon.com/lex/latest/dg/gl-limits.html
+	// https://www.twilio.com/docs/api/twiml/record
+	// Record Max Time => 15 second, 
+	respond(callback, `<Record maxLength="15000" recordingStatusCallback="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {

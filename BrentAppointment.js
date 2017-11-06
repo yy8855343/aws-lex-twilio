@@ -393,9 +393,9 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     request(options, function (err, response, body) {
         if (err) {
-            console(err);
+            console("saveError=",err);
         } else {
-            console.log(body);
+            console.log("saveSuccess=",body);
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
                 content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ schedule_obj.start_date } Have a wonderful day.`
@@ -466,6 +466,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
         if (bookingAvailabilities.length == 0) {
             slots.Date = null;
             outputSessionAttributes.Time = null;
+            slots.APTime = null;
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                     contentType: 'PlainText',
                     content: 'I`m sorry, we are busy during that time frame. Please choose another day.'
@@ -514,6 +515,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
             if (bookingAvailabilities.length == 0) {
                 slots.Date = null;
                 outputSessionAttributes.Time = null;
+                slots.APTime = null;
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                         contentType: 'PlainText',
                         content: 'I`m sorry, we are busy during that time frame. Please choose another day.'
