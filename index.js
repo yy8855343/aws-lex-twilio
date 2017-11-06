@@ -17,9 +17,9 @@ function getRequestSessionStr(event) {
 	try {
 		const params = event["params"] || {};
 		const querystring = params["querystring"] || {};
-		var requestType = querystring["SessionAttr"] + "";
-		if (requestType === null || requestType === undefined || requestType === "undefined") requestType = "";
-		return decodeURIComponent(requestType);
+		var sessionAttr = querystring["SessionAttr"] + "";
+		if (sessionAttr === null || sessionAttr === undefined || sessionAttr === "undefined") sessionAttr = "";
+		return decodeURIComponent(sessionAttr);
 	} catch (e) {
 		console.log("get request type catch");
 		console.log(e);
@@ -27,7 +27,21 @@ function getRequestSessionStr(event) {
 	}
 	return "";
 }
+const DEFAULT_USER_ID = "wyumpkwy84e5ka8r79hymiqsyk5l2cqj";
 
+function getRequestUserID(event) {
+	try {
+		const params = event["params"] || {};
+		const querystring = params["querystring"] || {};
+		var userId = querystring["userId"] + "";
+		if (userId === null || userId === undefined || userId === "undefined") return DEFAULT_USER_ID;
+		return userId;
+	} catch (e) {
+		console.log("get request type catch");
+		console.log(e);
+	}
+	return DEFAULT_USER_ID;
+}
 const contentType = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false";
 var params = {
 	botAlias: 'blue',
@@ -40,9 +54,9 @@ var params = {
 };
 
 const callAmazonLex = (event, callback, buffer, audioUrl) => {
-	const CallSid = getParam(event, "CallSid");
-
-	params.userId = CallSid;
+	const userId = getRequestUserID(event);
+	console.log("userIdFromParam=", userId)
+	params.userId = userId;
 	params.inputStream = buffer;
 	var sessionAttributes_str = getRequestSessionStr(event);
 
@@ -59,7 +73,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 		if (err) {
 			console.log("lexApiError=", err.stack);
 			var sessionAttributes_str_encode = encodeURIComponent(sessionAttributes_str);
-			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
+			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
@@ -78,7 +92,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 				sessionAttributes_str2 = JSON.stringify(data.sessionAttributes);
 			var sessionAttributes_str2_encode = encodeURIComponent(sessionAttributes_str2);
 			console.log("SSSS=", sessionAttributes_str2_encode);
-			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
+			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
 		}
 	});
 };
@@ -87,10 +101,9 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 	const RecordingStatus = getParam(event, "RecordingStatus");
 	const RecordingDuration = getParam(event, "RecordingDuration");
 	const RecordingUrl = getParam(event, "RecordingUrl");
-	const CallSid = getParam(event, "CallSid");
 
 	console.log("Event=", event);
-	console.log("RecordingStatus=", CallSid, RecordingDuration, RecordingStatus);
+	console.log("RecordingStatus=", RecordingDuration, RecordingStatus);
 	setTimeout(function () {
 		var sid = "AC4b33ce4f86f272fb4045df8a110c0047";
 		var auth = "d0b71067ea78687d521aee42de4ec159";
@@ -111,12 +124,12 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 				if (!error && response.statusCode == 200) {
 					callAmazonLex(event, callback, body, audioUrl);
 				} else {
-				    console.log("audioError=" + error + response.statusCode);
+					console.log("audioError=" + error + response.statusCode);
 					var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
 					respond(callback, `<Play>${audioUrl}</Play>
 								   <Pause length="1" />
 								   <Say>audio download error</Say>
-								   <Redirect>${API_URL}?SessionAttr=${sessionAttributes}</Redirect>`);
+								   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes}</Redirect>`);
 				}
 			});
 	}, 300);
@@ -161,7 +174,7 @@ const recordVoice = (event, callback) => {
 	// http://docs.aws.amazon.com/lex/latest/dg/gl-limits.html
 	// https://www.twilio.com/docs/api/twiml/record
 	// Record Max Time => 15 second, 
-	respond(callback, `<Record action="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
+	respond(callback, `<Record action="${API_URL}?userId=${getRequestUserID(event)}&SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {

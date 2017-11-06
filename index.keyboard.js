@@ -48,27 +48,36 @@ function getParam(event, parameter) {
 	return "";
 }
 
-const callAmazonLex = (event, callback) => {
-
+const DEFAULT_USER_ID = "wyumpkwy84e5ka8r79hymiqsyk5l2cqj";
+// genereate new User ID from 'CallSid' + Random 5 digits
+// @Param 'event' Object
+// @Return String
+function generateUserId(event) {
 	var callerId = getParam(event, "CallSid");
+	if (callerId.length == 0) return DEFAULT_USER_ID;
+	const random = Math.floor(Math.random() * 10000);
+	const userId = callerId + random;
+	return userId;
+}
 
-	params.userId = callerId;
+const callAmazonLex = (event, callback) => {
+	const userId = generateUserId(event);
+
+	params.userId = userId;
 	params.inputStream = "hi";
-
-	console.log("CallerId=" + params.userId);
+	console.log("generateUserId=" + userId);
 
 	lexruntime.postContent(params, function (err, data) {
 		if (err) {
 			console.log("error Message", err.stack);
 			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
-		} else 
-		{
+		} else {
 			console.log('----------------------- Data BEGIN -----------------------');
 			console.log("success message", data);
 			console.log('----------------------- Data END -----------------------');
 			respond(callback,
 				`<Say>${data.message}</Say>
-				<Redirect>${API_URL}</Redirect>
+				<Redirect>${API_URL}?userId=${userId}</Redirect>
 				`);
 		}
 	});
