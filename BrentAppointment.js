@@ -298,7 +298,7 @@ function buildDateOutputString(date) {
     const year = date.substring(0, 4);
     const month = date.substring(5, 7);
     const day = date.substring(8, 10);
-    return day + "." + month + "." + year;
+    return month + "." + day + "." + year;
 }
 // Build a string eliciting for a possible time slot among at least two availabilities.
 function buildAvailableTimeString(availabilities) {
@@ -393,9 +393,9 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     request(options, function (err, response, body) {
         if (err) {
-            console("saveError=",err);
+            console(err);
         } else {
-            console.log("saveSuccess=",body);
+            console.log(body);
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
                 content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ schedule_obj.start_date } Have a wonderful day.`
@@ -457,10 +457,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
         for (let i = 0; i < length; i++) {
             let obj = tmp_array[i];
             let start_time_length = tmp_array[i].start_time.length;
-            let time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
-            if (time != apt){
+            let tmp_time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
+            if (tmp_time != apt){
                 bookingAvailabilities.splice(bookingAvailabilities.indexOf(obj), 1);
-                console.log("Time="+time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
+                console.log("Time="+tmp_time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
             }
         }
         if (bookingAvailabilities.length == 0) {
