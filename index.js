@@ -69,7 +69,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 
 			if (dialogState == 'Fulfilled') {
 				return respond(callback,
-					`<Play>${audioUrl}</Play><Say>${data.message}</Say>
+					`<Say>${data.message}</Say>
 					 <Hangup />
 					`);
 			}
@@ -111,6 +111,7 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 				if (!error && response.statusCode == 200) {
 					callAmazonLex(event, callback, body, audioUrl);
 				} else {
+				    console.log("audioError=" + error + response.statusCode);
 					var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
 					respond(callback, `<Play>${audioUrl}</Play>
 								   <Pause length="1" />
@@ -160,7 +161,7 @@ const recordVoice = (event, callback) => {
 	// http://docs.aws.amazon.com/lex/latest/dg/gl-limits.html
 	// https://www.twilio.com/docs/api/twiml/record
 	// Record Max Time => 15 second, 
-	respond(callback, `<Record maxLength="15000" recordingStatusCallback="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
+	respond(callback, `<Record action="${API_URL}?SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {

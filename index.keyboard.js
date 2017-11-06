@@ -51,9 +51,7 @@ function getParam(event, parameter) {
 const callAmazonLex = (event, callback) => {
 
 	var callerId = getParam(event, "CallSid");
-	var random = Math.floor(Math.random() * 10000);
-	var userId = callerId + random;
-	console.log("userId= ", userId);
+
 	params.userId = callerId;
 	params.inputStream = "hi";
 
@@ -63,13 +61,14 @@ const callAmazonLex = (event, callback) => {
 		if (err) {
 			console.log("error Message", err.stack);
 			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
-		} else {
+		} else 
+		{
 			console.log('----------------------- Data BEGIN -----------------------');
 			console.log("success message", data);
 			console.log('----------------------- Data END -----------------------');
 			respond(callback,
 				`<Say>${data.message}</Say>
-				<Redirect>${API_URL}?userId=${userId}</Redirect>
+				<Redirect>${API_URL}</Redirect>
 				`);
 		}
 	});
