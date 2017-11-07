@@ -114,11 +114,9 @@ function isToday(date) {
 }
 
 function incrementTimeByThirtyMins(time) {
-    if (time.length !== 5) {
-        // Not a valid time
-    }
-    const hour = parseInt(time.substring(0, 2), 10);
-    const minute = parseInt(time.substring(3), 10);
+    var arr = time.split(":").map(val => Number(val));
+    const hour = parseInt(arr[0], 10);
+    const minute = parseInt(arr[1], 10);
     return (minute === 30) ? `${hour + 1}:00` : `${hour}:30`;
 }
 
@@ -172,6 +170,7 @@ function getAvailabilities(onSuccess, date, intentRequest, callback) {
 }
 
 var returnCallback = function (body, date, intentRequest, callback) {
+    const cal_appoints = [];
     const availabilities = [];
     const results = JSON.parse(body);
     //console.log("Result=" + results.length);
@@ -182,21 +181,27 @@ var returnCallback = function (body, date, intentRequest, callback) {
             continue;
         var start_date = results[i]['start_datetime'].substr(0, 10);
         var start_time = results[i]['start_datetime'].substr(11, 5);
-        var end_date = results[i]['end_datetime'].substr(0, 10);
-        var end_time = results[i]['end_datetime'].substr(11, 5);
         if (start_date != date)
             continue;
+        cal_appoints.push(buildTimeOutputString(start_time));
+    }
+
+    var begin_time = "08:30";
+    while(begin_time != "16:30"){
+        begin_time = incrementTimeByThirtyMins(begin_time);
+        console.log(begin_time);
+        if((begin_time=="12:00")||(begin_time=="12:30")){
+            continue;
+        }
         var schedule_obj = {};
-        schedule_obj.id = results[i]['id'];
-        schedule_obj.provider_id = results[i]['users_provider'];
-        schedule_obj.service_id = results[i]['services'];
-        schedule_obj.start_date = buildDateOutputString(start_date);
-        schedule_obj.start_time = buildTimeOutputString(start_time);
-        schedule_obj.end_time = buildTimeOutputString(end_time);
-        schedule_obj.end_date = buildDateOutputString(end_date);
-        schedule_obj.email = results[i]['users_customer']['email'];
+        schedule_obj.start_time = buildTimeOutputString(begin_time);
+        schedule_obj.end_time = buildTimeOutputString(incrementTimeByThirtyMins(begin_time));
+        if(cal_appoints.indexOf(schedule_obj.start_time)!=-1){
+            continue;
+        }
         availabilities.push(schedule_obj);
     }
+
 
     var bookingMap = {};
     bookingMap[`${date}`] = availabilities;
@@ -260,7 +265,7 @@ function validateBookAppointment(date, aptime) {
             return buildValidationResult(false, 'Date', 'I did not understand that, what date works best for you?');
         }
         if (!isValidInDate(date)) {
-            return buildValidationResult(false, 'Date', 'I`m sorry, we are busy during that time frame. Please choose another day.');
+            return buildValidationResult(false, 'Date', 'I am sorry, we are busy during that time frame. Please choose another day.');
         }
         /*if (parseLocalDate(date) <= new Date()) {
             return buildValidationResult(false, 'Date', 'Appointments must be scheduled a day in advance.  Can you try a different date?');
@@ -282,8 +287,11 @@ function isValidInDate(date) {
 }
 
 function buildTimeOutputString(time) {
-    const hour = parseInt(time.substring(0, 2), 10);
-    const minute = time.substring(3);
+    var arr = time.split(":").map(val => Number(val));
+    const hour = arr[0];
+    let minute = arr[1];
+    if(minute < 10)
+        minute = "00";
     if (hour > 12) {
         return `${hour - 12}:${minute} PM`;
     } else if (hour === 12) {
@@ -364,7 +372,7 @@ function buildOptions(slot, date, bookingMap) {
     }
 }
 
-function saveAppointment(schedule_obj, first_name, phone, outputSessionAttributes, callback) {
+function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAttributes, callback) {
 
     var request = require('request'); //Import the NPM package
     var options = {
@@ -375,15 +383,14 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         form: {
-            'id': schedule_obj.id,
-            'provider_id': schedule_obj.provider_id,
-            'service_id': schedule_obj.service_id,
-            'start_date': schedule_obj.start_date,
+            'provider_id': 14,
+            'service_id': 2,
+            'start_date': date,
             'start_time': schedule_obj.start_time,
             'end_time': schedule_obj.end_time,
-            'end_date': schedule_obj.end_date,
+            'end_date': date,
             'first_name': first_name,
-            'email': schedule_obj.email,
+            'email': "mic@gmail.com",
             'phone': phone,
         },
 
@@ -398,7 +405,7 @@ function saveAppointment(schedule_obj, first_name, phone, outputSessionAttribute
             console.log(body);
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
-                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ schedule_obj.start_date } Have a wonderful day.`
+                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ date } Have a wonderful day.`
             }));
         }
     });
@@ -429,9 +436,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
         slots.APTime = null;
         callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                 contentType: 'PlainText',
-                content: 'I`m sorry, we  are busy during that time frame. Please choose another day.'
+                content: 'I am sorry, we  are busy during that time frame. Please choose another day.'
             },
-            buildResponseCard('Specify Date', 'I`m sorry, we are busy during that time frame. Please choose another day.',
+            buildResponseCard('Specify Date', 'I am sorry, we are busy during that time frame. Please choose another day.',
                 buildOptions('Date', date, null))));
         return;
     }
@@ -470,9 +477,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
             slots.APTime = null;
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                     contentType: 'PlainText',
-                    content: 'I`m sorry, we are busy during that time frame. Please choose another day.'
+                    content: 'I am sorry, we are busy during that time frame. Please choose another day.'
                 },
-                buildResponseCard('Specify Date', 'I`m sorry, we are busy during that time frame. Please choose another day.',
+                buildResponseCard('Specify Date', 'I am sorry, we are busy during that time frame. Please choose another day.',
                     buildOptions('Date', date, null))));
             return;
         }
@@ -519,9 +526,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 slots.APTime = null;
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                         contentType: 'PlainText',
-                        content: 'I`m sorry, we are busy during that time frame. Please choose another day.'
+                        content: 'I am sorry, we are busy during that time frame. Please choose another day.'
                     },
-                    buildResponseCard('Specify Date', 'I`m sorry, we are busy during that time frame. Please choose another day.',
+                    buildResponseCard('Specify Date', 'I am sorry, we are busy during that time frame. Please choose another day.',
                         buildOptions('Date', date, null))));
                 return;
             }
@@ -556,7 +563,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
     if (firstName && phoneNumber) {
         //callback(close(outputSessionAttributes, 'Fulfilled', { contentType: 'PlainText',
         //content: `Thanks! Your appointment is scheduled for ${buildTimeOutputString(time)} at ${date} Have a wonderful day.` }));
-        saveAppointment(bookingAvailabilities[0], firstName, phoneNumber, outputSessionAttributes, callback);
+        saveAppointment(buildDateOutputString(date), bookingAvailabilities[0], firstName, phoneNumber, outputSessionAttributes, callback);
         return;
     }
 }
@@ -627,7 +634,7 @@ function makeAppointment(intentRequest, callback) {
 
 
         }
-        callback(delegate(outputSessionAttributes, slots));
+        //callback(delegate(outputSessionAttributes, slots));
         return;
     }
 
