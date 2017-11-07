@@ -70,13 +70,13 @@ const callAmazonLex = (event, callback) => {
 	lexruntime.postContent(params, function (err, data) {
 		if (err) {
 			console.log("error Message", err.stack);
-			respond(callback, `<Say>${err.stack}</Say><Redirect></Redirect>`); // an error occurred
+			respond(callback, `<Say voice="woman">${err.stack}</Say><Redirect></Redirect>`); // an error occurred
 		} else {
 			console.log('----------------------- Data BEGIN -----------------------');
 			console.log("success message", data);
 			console.log('----------------------- Data END -----------------------');
 			respond(callback,
-				`<Say>${data.message}</Say>
+				`<Say voice="woman">${data.message}</Say>
 				<Redirect>${API_URL}?userId=${userId}</Redirect>
 				`);
 		}
@@ -101,7 +101,7 @@ const main = (event, callback) => {
 				return callAmazonLex(event, callback);
 				/*return respond(callback, `
 					<Gather input="speech dtmf" timeout="3" action="${API_URL}">
-						<Say>${speatFor_one}</Say>
+						<Say voice="woman">${speatFor_one}</Say>
 					</Gather>
 					<Redirect />
 					`);*/
@@ -109,15 +109,15 @@ const main = (event, callback) => {
 			}
 			if (keyboard == "2") {
 				return respond(callback,
-					`<Say>${speatFor_two}</Say><Dial timeout="10">${phoneNumber}</Dial>`);
+					`<Say voice="woman">${speatFor_two}</Say><Dial timeout="10">${phoneNumber}</Dial>`);
 			}
 		}
 	}
 	return respond(callback,
 		`<Gather method="POST" numDigits="1" action="${API_URL_SELF}">
-			<Say>Hi</Say>
+			<Say voice="woman">Hi</Say>
 			<Pause length="1" />
-			<Say>Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
+			<Say voice="woman">Welcome to Brentwood Chiropractic. Press 1 to book an appointment,  press 2 for all questions</Say>
 		</Gather>
 		<Redirect />`);
 };
@@ -127,6 +127,6 @@ exports.handler = (event, context, callback) => {
 		main(event, callback);
 	} catch (e) {
 		console.error(e);
-		return respond(callback, `<Say>Some Error Occur at Lambda function ${e}</Say>`);
+		return respond(callback, `<Say voice="woman">Some Error Occur at Lambda function ${e}</Say>`);
 	}
 };

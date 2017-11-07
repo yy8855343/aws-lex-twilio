@@ -426,6 +426,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
 
     if (bookingAvailabilities == null || bookingAvailabilities.length === 0) {
         slots.Date = null;
+        slots.APTime = null;
         callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                 contentType: 'PlainText',
                 content: 'I`m sorry, we  are busy during that time frame. Please choose another day.'

@@ -73,7 +73,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 		if (err) {
 			console.log("lexApiError=", err.stack);
 			var sessionAttributes_str_encode = encodeURIComponent(sessionAttributes_str);
-			respond(callback, `<Say>Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
+			respond(callback, `<Say voice="woman">Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
@@ -83,7 +83,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 
 			if (dialogState == 'Fulfilled') {
 				return respond(callback,
-					`<Say>${data.message}</Say>
+					`<Say voice="woman">${data.message}</Say>
 					 <Hangup />
 					`);
 			}
@@ -92,7 +92,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 				sessionAttributes_str2 = JSON.stringify(data.sessionAttributes);
 			var sessionAttributes_str2_encode = encodeURIComponent(sessionAttributes_str2);
 			console.log("SSSS=", sessionAttributes_str2_encode);
-			respond(callback, `<Say>${data.message}</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
+			respond(callback, `<Say voice="woman">${data.message}</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str2_encode}</Redirect>`);
 		}
 	});
 };
@@ -128,7 +128,7 @@ const getAudioBufferFromUrl = (event, callback, audioUrl) => {
 					var sessionAttributes = encodeURIComponent(getRequestSessionStr(event));
 					// respond(callback, `<Play>${audioUrl}</Play>
 					// 			   <Pause length="1" />
-					// 			   <Say>audio download error</Say>
+					// 			   <Say voice="woman">audio download error</Say>
 					// 			   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}</Redirect>`);
 					respond(callback, `
 								   <Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}</Redirect>`);
@@ -192,6 +192,6 @@ exports.handler = (event, context, callback) => {
 		main(event, callback);
 	} catch (e) {
 		console.error(e);
-		return respond(callback, '<Say>Some Error Occur at Lambda function</Say>');
+		return respond(callback, '<Say voice="woman">Some Error Occur at Lambda function</Say>');
 	}
 };
