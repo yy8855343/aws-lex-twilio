@@ -308,6 +308,15 @@ function buildDateOutputString(date) {
     const day = date.substring(8, 10);
     return month + "." + day + "." + year;
 }
+
+function buildUTCDateOutputString(date) {
+    var mL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const year = date.substring(0, 4);
+    const month = date.substring(5, 7);
+    const day = date.substring(8, 10);
+    return ml[month-1] + " " + day;
+}
+
 // Build a string eliciting for a possible time slot among at least two availabilities.
 function buildAvailableTimeString(availabilities) {
     let prefix = 'We have availabilities at ';
@@ -375,6 +384,8 @@ function buildOptions(slot, date, bookingMap) {
 function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAttributes, callback) {
 
     var request = require('request'); //Import the NPM package
+    var schedule_date = buildDateOutputString(date);
+    var utc_date = buildUTCDateOutputString(date);
     var options = {
         "method": "post",
         url: "https://secure.bookedfusion.com/api/v1/calendar/save_calendar_appointment/?format=json",
@@ -385,10 +396,10 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
         form: {
             'provider_id': 14,
             'service_id': 2,
-            'start_date': date,
+            'start_date': schedule_date,
             'start_time': schedule_obj.start_time,
             'end_time': schedule_obj.end_time,
-            'end_date': date,
+            'end_date': schedule_date,
             'first_name': first_name,
             'email': "mic@gmail.com",
             'phone': phone,
@@ -405,7 +416,7 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
             console.log(body);
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
-                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ date } Have a wonderful day.`
+                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ utc_date } Have a wonderful day.`
             }));
         }
     });
@@ -434,6 +445,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
     if (bookingAvailabilities == null || bookingAvailabilities.length === 0) {
         slots.Date = null;
         slots.APTime = null;
+        outputSessionAttributes.bookingMap = "";
         callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                 contentType: 'PlainText',
                 content: 'I am sorry, we  are busy during that time frame. Please choose another day.'
@@ -475,6 +487,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
             slots.Date = null;
             outputSessionAttributes.Time = null;
             slots.APTime = null;
+            outputSessionAttributes.bookingMap = "";
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                     contentType: 'PlainText',
                     content: 'I am sorry, we are busy during that time frame. Please choose another day.'
@@ -524,6 +537,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 slots.Date = null;
                 outputSessionAttributes.Time = null;
                 slots.APTime = null;
+                outputSessionAttributes.bookingMap = "";
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                         contentType: 'PlainText',
                         content: 'I am sorry, we are busy during that time frame. Please choose another day.'
@@ -563,7 +577,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
     if (firstName && phoneNumber) {
         //callback(close(outputSessionAttributes, 'Fulfilled', { contentType: 'PlainText',
         //content: `Thanks! Your appointment is scheduled for ${buildTimeOutputString(time)} at ${date} Have a wonderful day.` }));
-        saveAppointment(buildDateOutputString(date), bookingAvailabilities[0], firstName, phoneNumber, outputSessionAttributes, callback);
+        saveAppointment(date, bookingAvailabilities[0], firstName, phoneNumber, outputSessionAttributes, callback);
         return;
     }
 }
