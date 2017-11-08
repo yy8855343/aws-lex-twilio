@@ -161,7 +161,7 @@ function getAvailabilities(onSuccess, date, intentRequest, callback) {
         if (err) {
             console(err);
         } else {
-            console.log("getAvailabilities[request]:"+body);
+            //console.log("getAvailabilities[request]:"+body);
             onSuccess(body, date, intentRequest, callback);
         }
     });
@@ -189,7 +189,6 @@ var returnCallback = function (body, date, intentRequest, callback) {
     var begin_time = "08:30";
     while(begin_time != "16:30"){
         begin_time = incrementTimeByThirtyMins(begin_time);
-        console.log(begin_time);
         if((begin_time=="12:00")||(begin_time=="12:30")){
             continue;
         }
@@ -310,11 +309,11 @@ function buildDateOutputString(date) {
 }
 
 function buildUTCDateOutputString(date) {
-    var mL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const mL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const year = date.substring(0, 4);
     const month = date.substring(5, 7);
     const day = date.substring(8, 10);
-    return ml[month-1] + " " + day;
+    return mL[month-1] + " " + parseInt(day);
 }
 
 // Build a string eliciting for a possible time slot among at least two availabilities.
@@ -407,7 +406,7 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
 
         //"rejectUnauthorized": false,
     };
-    console.log('sssssssssssssss' + JSON.stringify(options.form));
+    //console.log('sssssssssssssss' + JSON.stringify(options.form));
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     request(options, function (err, response, body) {
         if (err) {
@@ -480,7 +479,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
             let tmp_time = tmp_array[i].start_time.substring(start_time_length-2, start_time_length);
             if (tmp_time != apt){
                 bookingAvailabilities.splice(bookingAvailabilities.indexOf(obj), 1);
-                console.log("Time="+tmp_time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
+                //console.log("Time="+tmp_time+"///APT="+apt+"Result=" + JSON.stringify(bookingAvailabilities));
             }
         }
         if (bookingAvailabilities.length == 0) {
@@ -498,72 +497,80 @@ function makeAppointment_afterDay(intentRequest, callback) {
         }
     }
     //const appointmentTypeAvailabilities = getAvailabilitiesForDuration(getDuration(appointmentType), bookingAvailabilities);
-    console.log("Time=" + time);
-    if (!time) {
+    //console.log("Time=" + time);
+    if (!time&&!outputSessionAttributes.RepeatConfirm) {
         const time = bookingAvailabilities[0].start_time;
 
         let messageContent = `${time} is available now. Does that work for you?`;
         outputSessionAttributes.Time = time;
-
         callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                 contentType: 'PlainText',
-                content: `${time} is available now. Does that work for you?`
-            },
-            buildResponseCard('Confirm Appointment', `${time} is available now. Does that work for you?`, [{
-                text: 'yes',
-                value: 'yes'
-            }, {
-                text: 'no',
-                value: 'no'
-            }])));
+                content: `${time} is available now. Does that work for you? - 1`
+            }));
         return;
     }
+    console.log("RepeatConfirm=" + outputSessionAttributes.RepeatConfirm);
     if (confirmation != "None") {
         if (confirmation == "Confirmed") {
-            callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'FirstName', {
-                    contentType: 'PlainText',
-                    content: 'Ok great, What is your FirstName?'
-                },
-                buildResponseCard('Specify FirstName', 'What is your FirstName?')));
+            if(outputSessionAttributes.RepeatConfirm){
+                let bookingAvailabilities = bookingMap[`${date}`];
+                const time = bookingAvailabilities[0].start_time;
+
+                outputSessionAttributes.Time = time;
+                outputSessionAttributes.RepeatConfirm = null;
+                callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
+                        contentType: 'PlainText',
+                        content: `${time} is available now. Does that work for you? - 2`
+                    }));
+            }
+            else{
+                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'FirstName', {
+                        contentType: 'PlainText',
+                        content: 'Ok great, What is your FirstName?'
+                    },
+                    buildResponseCard('Specify FirstName', 'What is your FirstName?')));
+            }
             return;
         } else {
-            let bookingAvailabilities = bookingMap[`${date}`];
-            bookingAvailabilities.splice(0, 1);
-
-            bookingMap[`${date}`] = bookingAvailabilities;
-            outputSessionAttributes.bookingMap = JSON.stringify(bookingMap);
-
-            if (bookingAvailabilities.length == 0) {
+            if(outputSessionAttributes.RepeatConfirm){ 
                 slots.Date = null;
                 outputSessionAttributes.Time = null;
                 slots.APTime = null;
                 outputSessionAttributes.bookingMap = "";
+                outputSessionAttributes.RepeatConfirm == null;
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                         contentType: 'PlainText',
-                        content: 'I am sorry, we are busy during that time frame. Please choose another day.'
-                    },
-                    buildResponseCard('Specify Date', 'I am sorry, we are busy during that time frame. Please choose another day.',
-                        buildOptions('Date', date, null))));
-                return;
+                        content: 'What day would you like to come in? - 2'
+                    }));
             }
+            else{
+                let bookingAvailabilities = bookingMap[`${date}`];
+                bookingAvailabilities.splice(0, 1);
 
-            const time = bookingAvailabilities[0].start_time;
+                bookingMap[`${date}`] = bookingAvailabilities;
+                outputSessionAttributes.bookingMap = JSON.stringify(bookingMap);
 
-            outputSessionAttributes.Time = time;
+                if (bookingAvailabilities.length == 0) {
+                    //slots.Date = null;
+                    outputSessionAttributes.Time = null;
+                    //slots.APTime = null;
+                    outputSessionAttributes.bookingMap = "";
+                    outputSessionAttributes.RepeatConfirm = true;
+                    callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
+                        contentType: 'PlainText',
+                        content: `I'm sorry. Those are the only times we have available. Would you like to repeat them?`
+                    }));
+                    return;
+                }
 
-            callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
-                    contentType: 'PlainText',
-                    content: `${time} is available now. Does that work for you?`
-                },
-                buildResponseCard('Confirm Appointment', `${time} is available now. Does that work for you?`, [{
-                    text: 'yes',
-                    value: 'yes'
-                }, {
-                    text: 'no',
-                    value: 'no'
-                }])));
+                const time = bookingAvailabilities[0].start_time;
+                outputSessionAttributes.Time = time; 
+                callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
+                        contentType: 'PlainText',
+                        content: `${time} is available now. Does that work for you? - 3`
+                    }));
+            }
             return;
-
         }
     }
     if (firstName && !phoneNumber) {
@@ -622,10 +629,8 @@ function makeAppointment(intentRequest, callback) {
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
                 intentRequest.currentIntent.slots, 'Date', {
                     contentType: 'PlainText',
-                    content: `What day would you like to come in?`
-                },
-                buildResponseCard('Specify Date', `What day would you like to come in?`,
-                    buildOptions('Date', date, null))));
+                    content: `What day would you like to come in - 1?`
+                }));
 
             return;
         }
@@ -680,7 +685,7 @@ function dispatch(intentRequest, callback) {
 // --------------- Main handler -----------------------
 
 function loggingCallback(response, originalCallback) {
-    console.log("loggingCallback:"+JSON.stringify(response, null, 2));
+    //console.log("loggingCallback:"+JSON.stringify(response, null, 2));
     originalCallback(null, response);
 }
 
@@ -690,7 +695,7 @@ exports.handler = (event, context, callback) => {
     try {
         // By default, treat the user request as coming from the America/New_York time zone.
         process.env.TZ = 'America/New_York';
-        console.log(`event.bot.name=${event.bot.name}`);
+        //console.log(`event.bot.name=${event.bot.name}`);
         console.log(`event=`+JSON.stringify(event));
         /**
          * Uncomment this if statement and populate with your Lex bot name and / or version as

@@ -27,6 +27,7 @@ function getRequestSessionStr(event) {
 	}
 	return "";
 }
+
 const DEFAULT_USER_ID = "wyumpkwy84e5ka8r79hymiqsyk5l2cqj";
 
 function getRequestUserID(event) {
@@ -176,7 +177,7 @@ const recordVoice = (event, callback) => {
 	// http://docs.aws.amazon.com/lex/latest/dg/gl-limits.html
 	// https://www.twilio.com/docs/api/twiml/record
 	// Record Max Time => 15 second, 
-	respond(callback, `<Record action="${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}" timeout="3" trim="do-not-trim" />`);
+	respond(callback, `<Record action="${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes}" timeout="2" trim="do-not-trim" />`);
 };
 
 const main = (event, callback) => {
