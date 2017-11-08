@@ -73,7 +73,7 @@ const callAmazonLex = (event, callback, buffer, audioUrl) => {
 		if (err) {
 			console.log("lexApiError=", err.stack);
 			var sessionAttributes_str_encode = encodeURIComponent(sessionAttributes_str);
-			respond(callback, `<Say voice="woman">Lex API error</Say><Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
+			respond(callback, `<Redirect>${API_URL}?userId=${getRequestUserID(event)}&amp;SessionAttr=${sessionAttributes_str_encode}</Redirect>`); // an error occurred
 		} else {
 			var inputTranscript = data.inputTranscript;
 			var dialogState = data.dialogState;
