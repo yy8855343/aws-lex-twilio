@@ -27,7 +27,6 @@ function getRequestSessionStr(event) {
 	}
 	return "";
 }
-
 const DEFAULT_USER_ID = "wyumpkwy84e5ka8r79hymiqsyk5l2cqj";
 
 function getRequestUserID(event) {

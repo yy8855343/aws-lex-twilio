@@ -406,7 +406,7 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
 
         //"rejectUnauthorized": false,
     };
-    //console.log('sssssssssssssss' + JSON.stringify(options.form));
+    console.log('SaveOption=' + JSON.stringify(options.form));
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     request(options, function (err, response, body) {
         if (err) {
@@ -415,7 +415,7 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
             console.log(body);
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
-                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ utc_date } Have a wonderful day.`
+                content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ utc_date }. Have a wonderful day.`
             }));
         }
     });
@@ -501,11 +501,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
     if (!time&&!outputSessionAttributes.RepeatConfirm) {
         const time = bookingAvailabilities[0].start_time;
 
-        let messageContent = `${time} is available now. Does that work for you?`;
         outputSessionAttributes.Time = time;
         callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                 contentType: 'PlainText',
-                content: `${time} is available now. Does that work for you? - 1`
+                content: `${time} is available now. Does that work for you?`
             }));
         return;
     }
@@ -520,7 +519,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 outputSessionAttributes.RepeatConfirm = null;
                 callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                         contentType: 'PlainText',
-                        content: `${time} is available now. Does that work for you? - 2`
+                        content: `${time} is available now. Does that work for you?`
                     }));
             }
             else{
@@ -537,10 +536,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 outputSessionAttributes.Time = null;
                 slots.APTime = null;
                 outputSessionAttributes.bookingMap = "";
-                outputSessionAttributes.RepeatConfirm == null;
+                outputSessionAttributes.RepeatConfirm = null;
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
                         contentType: 'PlainText',
-                        content: 'What day would you like to come in? - 2'
+                        content: 'What day would you like to come in?'
                     }));
             }
             else{
@@ -567,7 +566,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 outputSessionAttributes.Time = time; 
                 callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                         contentType: 'PlainText',
-                        content: `${time} is available now. Does that work for you? - 3`
+                        content: `${time} is available now. Does that work for you?`
                     }));
             }
             return;
@@ -629,7 +628,7 @@ function makeAppointment(intentRequest, callback) {
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
                 intentRequest.currentIntent.slots, 'Date', {
                     contentType: 'PlainText',
-                    content: `What day would you like to come in - 1?`
+                    content: `What day would you like to come in?`
                 }));
 
             return;
@@ -647,20 +646,22 @@ function makeAppointment(intentRequest, callback) {
                 return;
             } else {
                 makeAppointment_afterDay(intentRequest, callback);
-                //return;////***********???????
+                return;////***********???????
             }
 
 
 
         }
-        //callback(delegate(outputSessionAttributes, slots));
+        callback(delegate(outputSessionAttributes, slots));
         return;
     }
-
-    callback(close(outputSessionAttributes, 'Fulfilled', {
+    //let bookingAvailabilities = bookingMap[`${date}`];
+    //saveAppointment(date, bookingAvailabilities[0], firstName, phoneNumber, outputSessionAttributes, callback);
+    return;
+    /*callback(close(outputSessionAttributes, 'Fulfilled', {
         contentType: 'PlainText',
         content: `Okay, I have booked your appointment.  We will see you at ${time} on ${date}`
-    }));
+    }));*/
 }
 
 // --------------- Intents -----------------------
