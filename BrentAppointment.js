@@ -385,6 +385,7 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
     var request = require('request'); //Import the NPM package
     var schedule_date = buildDateOutputString(date);
     var utc_date = buildUTCDateOutputString(date);
+    first_name = first_name.charAt(0).toUpperCase() + first_name.slice(1);
     var options = {
         "method": "post",
         url: "https://secure.bookedfusion.com/api/v1/calendar/save_calendar_appointment/?format=json",
