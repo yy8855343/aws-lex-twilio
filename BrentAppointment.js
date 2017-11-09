@@ -84,6 +84,20 @@ function buildResponseCard(title, subTitle, options) {
 
 // ---------------- Helper Functions --------------------------------------------------
 
+function isContain(str, key){
+    if(str.indexOf(key) == -1)
+        return false;
+    return true;
+}
+
+function analNSelect(nSelect){
+    if(isContain(nSelect,"repeat"))
+        return 1;
+    if(isContain(nSelect, "choose")||isContain(nSelect, "another")||(isContain(nSelect, "day")))
+        return 2;
+    return -1;
+}
+
 function parseLocalDate(date) {
     /**
      * Construct a date object in the local timezone by parsing the input date string, assuming a YYYY-MM-DD format.
@@ -258,7 +272,7 @@ function buildValidationResult(isValid, violatedSlot, messageContent) {
     };
 }
 
-function validateBookAppointment(date, aptime) {
+function validateBookAppointment(date, aptime, nSelect) {
     if (date) {
         if (!isValidDate(date)) {
             return buildValidationResult(false, 'Date', 'I did not understand that, what date works best for you?');
@@ -277,6 +291,12 @@ function validateBookAppointment(date, aptime) {
         if ((aptime.toLowerCase() != "morning") && (aptime.toLowerCase() != "evening")) {
             return buildValidationResult(false, 'APTime', 'Sorry, morning or evening?');
         }
+    }
+    if (nSelect) {
+    	var selection = analNSelect(nSelect);
+    	if(selection == -1){
+    		return buildValidationResult(false, 'NSelect', 'Would you like to repeat them or choose another day?');
+    	}
     }
     return buildValidationResult(true, "Date", null);
 }
@@ -432,7 +452,8 @@ function convertDate(date){
 function makeAppointment_afterDay(intentRequest, callback) {
     const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
-    const confirmation = intentRequest.currentIntent.confirmationStatus;
+    const nSelect = intentRequest.currentIntent.slots.NSelect;
+    let confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
     const phoneNumber = intentRequest.currentIntent.slots.PhoneNumber;
     const source = intentRequest.invocationSource;
@@ -500,6 +521,14 @@ function makeAppointment_afterDay(intentRequest, callback) {
     }
     //const appointmentTypeAvailabilities = getAvailabilitiesForDuration(getDuration(appointmentType), bookingAvailabilities);
     //console.log("Time=" + time);
+    if(nSelect){
+    	const selection = analNSelect(nSelect);
+    	if(selection == 1)
+    		confirmation = "Confirmed";
+    	else if(selection == 2)
+    		confirmation = "Denined";
+    	slots.NSelect = null;
+    }
     if (!time&&!outputSessionAttributes.RepeatConfirm) {
         const time = bookingAvailabilities[0].start_time;
 
@@ -557,10 +586,10 @@ function makeAppointment_afterDay(intentRequest, callback) {
                     //slots.APTime = null;
                     outputSessionAttributes.bookingMap = "";
                     outputSessionAttributes.RepeatConfirm = true;
-                    callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
-                        contentType: 'PlainText',
-                        content: `I'm sorry. Those are the only times we have available. Would you like to repeat them?`
-                    }));
+                    callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'NSelect', {
+		                contentType: 'PlainText',
+		                content: `I am sorry. Those are the only times we have available. Would you like to repeat them or choose another day?`
+		            }));
                     return;
                 }
 
@@ -605,6 +634,7 @@ function makeAppointment(intentRequest, callback) {
 
     const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
+    const nSelect = intentRequest.currentIntent.slots.NSelect;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
     const phoneNumber = intentRequest.currentIntent.slots.PhoneNumber;
@@ -616,7 +646,7 @@ function makeAppointment(intentRequest, callback) {
     if (source === 'DialogCodeHook') {
         // Perform basic validation on the supplied input slots.
         const slots = intentRequest.currentIntent.slots;
-        const validationResult = validateBookAppointment(date, aptime);
+        const validationResult = validateBookAppointment(date, aptime, nSelect);
         if (!validationResult.isValid) {
             slots[`${validationResult.violatedSlot}`] = null;
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
