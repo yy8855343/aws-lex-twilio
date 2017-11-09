@@ -268,9 +268,10 @@ function validateBookAppointment(date, aptime) {
         }
         /*if (parseLocalDate(date) <= new Date()) {
             return buildValidationResult(false, 'Date', 'Appointments must be scheduled a day in advance.  Can you try a different date?');
-        } else if (parseLocalDate(date).getDay() === 0 || parseLocalDate(date).getDay() === 6) {
+        } else*/
+        if (parseLocalDate(date).getDay() === 0 || parseLocalDate(date).getDay() === 6) {
             return buildValidationResult(false, 'Date', 'Our office is not open on the weekends, can you provide a work day?');
-        }*/
+        }
     }
     if (aptime) {
         if ((aptime.toLowerCase() != "morning") && (aptime.toLowerCase() != "evening")) {
