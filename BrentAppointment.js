@@ -93,7 +93,7 @@ function isContain(str, key){
 function analNSelect(nSelect){
     if(isContain(nSelect,"repeat"))
         return 1;
-    if(isContain(nSelect, "choose")||isContain(nSelect, "another")||(isContain(nSelect, "day")))
+    if(isContain(nSelect, "choose")||isContain(nSelect, "another"))
         return 2;
     return -1;
 }

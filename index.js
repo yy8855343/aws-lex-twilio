@@ -192,6 +192,7 @@ exports.handler = (event, context, callback) => {
 		main(event, callback);
 	} catch (e) {
 		console.error(e);
-		return respond(callback, '<Say voice="woman">Some Error Occur at Lambda function</Say>');
+		//return respond(callback, '<Say voice="woman">Some Error Occur at Lambda function</Say>');
+		return respond(callback, '');
 	}
 };
