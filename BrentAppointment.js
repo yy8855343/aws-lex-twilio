@@ -295,7 +295,7 @@ function validateBookAppointment(date, aptime, nSelect) {
     if (nSelect) {
     	var selection = analNSelect(nSelect);
     	if(selection == -1){
-    		return buildValidationResult(false, 'NSelect', 'Would you like to repeat them or choose another day?');
+    		return buildValidationResult(false, 'Choose', 'Would you like to repeat them or choose another day?');
     	}
     }
     return buildValidationResult(true, "Date", null);
@@ -452,7 +452,6 @@ function convertDate(date){
 function makeAppointment_afterDay(intentRequest, callback) {
     const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
-    const nSelect = intentRequest.currentIntent.slots.NSelect;
     let confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
     const phoneNumber = intentRequest.currentIntent.slots.PhoneNumber;
@@ -460,7 +459,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
     const outputSessionAttributes = intentRequest.sessionAttributes || {};
     const time = outputSessionAttributes.Time;
     const bookingMap = JSON.parse(outputSessionAttributes.bookingMap || '{}');
-    const slots = intentRequest.currentIntent.slots;
+    let slots = intentRequest.currentIntent.slots;
 
     let bookingAvailabilities = bookingMap[`${date}`];
 
@@ -520,18 +519,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
         }
     }
     //const appointmentTypeAvailabilities = getAvailabilitiesForDuration(getDuration(appointmentType), bookingAvailabilities);
-    //console.log("Time=" + time);
-    if(nSelect){
-    	const selection = analNSelect(nSelect);
-    	if(selection == 1)
-    		confirmation = "Confirmed";
-    	else if(selection == 2)
-    		confirmation = "Denined";
-    	slots.NSelect = null;
-    }
-    if (!time&&!outputSessionAttributes.RepeatConfirm) {
+    
+    if (!time) {
         const time = bookingAvailabilities[0].start_time;
-
         outputSessionAttributes.Time = time;
         callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
                 contentType: 'PlainText',
@@ -539,67 +529,43 @@ function makeAppointment_afterDay(intentRequest, callback) {
             }));
         return;
     }
-    console.log("RepeatConfirm=" + outputSessionAttributes.RepeatConfirm);
     if (confirmation != "None") {
+    	
         if (confirmation == "Confirmed") {
-            if(outputSessionAttributes.RepeatConfirm){
-                let bookingAvailabilities = bookingMap[`${date}`];
-                const time = bookingAvailabilities[0].start_time;
+            callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'FirstName', {
+                    contentType: 'PlainText',
+                    content: 'Ok great, What is your FirstName?'
+                },
+                buildResponseCard('Specify FirstName', 'What is your FirstName?')));
 
-                outputSessionAttributes.Time = time;
-                outputSessionAttributes.RepeatConfirm = null;
-                callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
-                        contentType: 'PlainText',
-                        content: `${time} is available now. Does that work for you?`
-                    }));
-            }
-            else{
-                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'FirstName', {
-                        contentType: 'PlainText',
-                        content: 'Ok great, What is your FirstName?'
-                    },
-                    buildResponseCard('Specify FirstName', 'What is your FirstName?')));
-            }
             return;
         } else {
-            if(outputSessionAttributes.RepeatConfirm){ 
-                slots.Date = null;
+            
+            let bookingAvailabilities = bookingMap[`${date}`];
+            bookingAvailabilities.splice(0, 1);
+
+            bookingMap[`${date}`] = bookingAvailabilities;
+            outputSessionAttributes.bookingMap = JSON.stringify(bookingMap);
+
+            if (bookingAvailabilities.length == 0) {
+                //slots.Date = null;
                 outputSessionAttributes.Time = null;
-                slots.APTime = null;
+                //slots.APTime = null;
                 outputSessionAttributes.bookingMap = "";
-                outputSessionAttributes.RepeatConfirm = null;
-                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Date', {
-                        contentType: 'PlainText',
-                        content: 'What day would you like to come in?'
-                    }));
+                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Choose', {
+	                contentType: 'PlainText',
+	                content: `I am sorry. Those are the only times we have available. Would you like to repeat them or choose another day?`
+	            }));
+                return;
             }
-            else{
-                let bookingAvailabilities = bookingMap[`${date}`];
-                bookingAvailabilities.splice(0, 1);
+            
+            const time = bookingAvailabilities[0].start_time;
+            outputSessionAttributes.Time = time; 
+            callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
+                    contentType: 'PlainText',
+                    content: `${time} is available now. Does that work for you?`
+                }));
 
-                bookingMap[`${date}`] = bookingAvailabilities;
-                outputSessionAttributes.bookingMap = JSON.stringify(bookingMap);
-
-                if (bookingAvailabilities.length == 0) {
-                    //slots.Date = null;
-                    outputSessionAttributes.Time = null;
-                    //slots.APTime = null;
-                    outputSessionAttributes.bookingMap = "";
-                    outputSessionAttributes.RepeatConfirm = true;
-                    callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'NSelect', {
-		                contentType: 'PlainText',
-		                content: `I am sorry. Those are the only times we have available. Would you like to repeat them or choose another day?`
-		            }));
-                    return;
-                }
-
-                const time = bookingAvailabilities[0].start_time;
-                outputSessionAttributes.Time = time; 
-                callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
-                        contentType: 'PlainText',
-                        content: `${time} is available now. Does that work for you?`
-                    }));
-            }
             return;
         }
     }
@@ -632,20 +598,20 @@ function makeAppointment_afterDay(intentRequest, callback) {
  */
 function makeAppointment(intentRequest, callback) {
 
-    const date = convertDate(intentRequest.currentIntent.slots.Date);
+    let date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
-    const nSelect = intentRequest.currentIntent.slots.NSelect;
+    const nSelect = intentRequest.currentIntent.slots.Choose;
     const confirmation = intentRequest.currentIntent.confirmationStatus;
     const firstName = intentRequest.currentIntent.slots.FirstName;
     const phoneNumber = intentRequest.currentIntent.slots.PhoneNumber;
     const source = intentRequest.invocationSource;
     const outputSessionAttributes = intentRequest.sessionAttributes || {};
     const time = outputSessionAttributes.Time;
-    const bookingMap = JSON.parse(outputSessionAttributes.bookingMap || '{}');
+    let bookingMap = JSON.parse(outputSessionAttributes.bookingMap || '{}');
 
     if (source === 'DialogCodeHook') {
         // Perform basic validation on the supplied input slots.
-        const slots = intentRequest.currentIntent.slots;
+        let slots = intentRequest.currentIntent.slots;
         const validationResult = validateBookAppointment(date, aptime, nSelect);
         if (!validationResult.isValid) {
             slots[`${validationResult.violatedSlot}`] = null;
@@ -655,10 +621,31 @@ function makeAppointment(intentRequest, callback) {
                     buildOptions(validationResult.violatedSlot, date, bookingMap))));
             return;
         }
-
+        if(nSelect){
+            const selection = analNSelect(nSelect);
+            if(selection == 1) { // Repeat them
+                intentRequest.currentIntent.slots.Choose = null;
+                //slots.Choose = null;
+                bookingMap = {};
+                if(intentRequest.sessionAttributes){
+                    intentRequest.sessionAttributes.Time = null;
+                    intentRequest.sessionAttributes.bookingMap = "";
+                }
+            }
+            else if(selection == 2) { // Choose another day
+                date = slots.Date = null;
+                outputSessionAttributes.Time = null;
+                slots.APTime = null;
+                slots.Choose = null;
+                //intentRequest.currentIntent.slots.Choose = null;
+                outputSessionAttributes.bookingMap = "";
+            }
+            
+        }
         if (!date) {
+            console.log("beforeCall=" + JSON.stringify(slots));
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
-                intentRequest.currentIntent.slots, 'Date', {
+                slots, 'Date', {
                     contentType: 'PlainText',
                     content: `What day would you like to come in?`
                 }));
@@ -718,7 +705,7 @@ function dispatch(intentRequest, callback) {
 // --------------- Main handler -----------------------
 
 function loggingCallback(response, originalCallback) {
-    //console.log("loggingCallback:"+JSON.stringify(response, null, 2));
+    console.log("loggingCallback:"+JSON.stringify(response, null, 2));
     originalCallback(null, response);
 }
 
