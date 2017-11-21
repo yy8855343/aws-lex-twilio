@@ -141,6 +141,12 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (maxInt - minInt)) + minInt;
 }
 
+function DateToString(date){
+    if(!date)
+        return null;
+    return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+}
+
 /**
  * Helper function which in a full implementation would  feed into a backend API to provide query schedule availability.
  * The output of this function is an array of 30 minute periods of availability, expressed in ISO-8601 time format.
@@ -293,10 +299,10 @@ function validateBookAppointment(date, aptime, nSelect) {
         }
     }
     if (nSelect) {
-    	var selection = analNSelect(nSelect);
-    	if(selection == -1){
-    		return buildValidationResult(false, 'Choose', 'Would you like to repeat them or choose another day?');
-    	}
+        var selection = analNSelect(nSelect);
+        if(selection == -1){
+            return buildValidationResult(false, 'Choose', 'Would you like to repeat them or choose another day?');
+        }
     }
     return buildValidationResult(true, "Date", null);
 }
@@ -422,7 +428,6 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
             'end_time': schedule_obj.end_time,
             'end_date': schedule_date,
             'first_name': first_name,
-            'email': "mic@gmail.com",
             'phone': phone,
         },
 
@@ -432,9 +437,31 @@ function saveAppointment(date, schedule_obj, first_name, phone, outputSessionAtt
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     request(options, function (err, response, body) {
         if (err) {
-            console(err);
+            console.log(err);
         } else {
             console.log(body);
+            const appointmentId = outputSessionAttributes.appointmentId;
+            if((appointmentId != "0") || (appointmentId != 0)){
+                var options1 = {
+                    "method": "delete",
+                    url: "https://secure.bookedfusion.com/api/v1/calendar/" + appointmentId + "/",
+                    headers: {
+                        "Authorization": "Basic cm9vdEBnbWFpbC5jb206QkIyOTBBQTQ1MENJ",
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                };
+                request(options1, function (err, response, body) {
+                    if(err){
+                        console.log(err);
+                    } else {
+                        callback(close(outputSessionAttributes, 'Fulfilled', {
+                            contentType: 'PlainText',
+                            content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ utc_date }. Have a wonderful day.`
+                        }));
+                    }
+                })
+                return;
+            }
             callback(close(outputSessionAttributes, 'Fulfilled', {
                 contentType: 'PlainText',
                 content: `Thanks! Your appointment is scheduled for ${ schedule_obj.start_time } at ${ utc_date }. Have a wonderful day.`
@@ -449,6 +476,7 @@ function convertDate(date){
     var currentDate = new Date();
     return currentDate.getFullYear() + date.substr(4, date.length-4);
 }
+
 function makeAppointment_afterDay(intentRequest, callback) {
     const date = convertDate(intentRequest.currentIntent.slots.Date);
     let aptime = intentRequest.currentIntent.slots.APTime;
@@ -530,7 +558,7 @@ function makeAppointment_afterDay(intentRequest, callback) {
         return;
     }
     if (confirmation != "None") {
-    	
+        
         if (confirmation == "Confirmed") {
             callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'FirstName', {
                     contentType: 'PlainText',
@@ -553,9 +581,9 @@ function makeAppointment_afterDay(intentRequest, callback) {
                 //slots.APTime = null;
                 outputSessionAttributes.bookingMap = "";
                 callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, slots, 'Choose', {
-	                contentType: 'PlainText',
-	                content: `I am sorry. Those are the only times we have available. Would you like to repeat them or choose another day?`
-	            }));
+                    contentType: 'PlainText',
+                    content: `I am sorry. Those are the only times we have available. Would you like to repeat them or choose another day?`
+                }));
                 return;
             }
             
@@ -585,6 +613,39 @@ function makeAppointment_afterDay(intentRequest, callback) {
     }
 }
 
+function deleteAppointment(outputSessionAttributes, appointmentId){
+    var request = require('request'); //Import the NPM package
+    const date = DateToString(new Date());
+    const username = "root@gmail.com";
+    const password = "BB290AA450CI";
+    let auth = "Basic " + new Buffer(username + ":" + password).toString("base64");
+    var options = {
+        "method": "delete",
+        url: "https://secure.bookedfusion.com/api/v1/calendar/" + appointmentId + "/",
+        headers: {
+            "Authorization": auth,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+    };
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    request(options, function (err, response, body) {
+        if (err) {
+            console(err);
+        } else {
+            callback(close(outputSessionAttributes, 'Fulfilled', {
+                contentType: 'PlainText',
+                content: `Ok. your appointment is canceled. Have a wonderfull day.`
+            }));
+            return;
+        }
+    });
+}
+
+function cancelAvailable(date, time){
+    const today = new Date();
+    const aDate = new Date(date + " " + time);
+    return ((today.getTime() - aDate.getTime()) / 1000) > 24*60*60;
+}
 
 // --------------- Functions that control the skill's behavior -----------------------
 
@@ -608,8 +669,21 @@ function makeAppointment(intentRequest, callback) {
     const outputSessionAttributes = intentRequest.sessionAttributes || {};
     const time = outputSessionAttributes.Time;
     let bookingMap = JSON.parse(outputSessionAttributes.bookingMap || '{}');
+    const appointmentId = outputSessionAttributes.appointmentId;
+    const keyboard = outputSessionAttributes.keyboard;
+    const appointmentDate = outputSessionAttributes.appointmentDate;
+    const appointmentTime = outputSessionAttributes.appointmentTime;
+    const customer_name   = outputSessionAttributes.customer_name;
 
     if (source === 'DialogCodeHook') {
+
+        if((keyboard == 3) && (confirmation != "None")){
+            if(confirmation == "Confirmed") {
+                deleteAppointment(outputSessionAttributes, appointmentId);
+                return;
+            }
+            return;
+        }
         // Perform basic validation on the supplied input slots.
         let slots = intentRequest.currentIntent.slots;
         const validationResult = validateBookAppointment(date, aptime, nSelect);
@@ -621,7 +695,7 @@ function makeAppointment(intentRequest, callback) {
                     buildOptions(validationResult.violatedSlot, date, bookingMap))));
             return;
         }
-        if(nSelect){
+        if(nSelect){  //nSelect=1 -> Repeat them  nSelect=2 -> Choose another day.
             const selection = analNSelect(nSelect);
             if(selection == 1) { // Repeat them
                 intentRequest.currentIntent.slots.Choose = null;
@@ -643,13 +717,38 @@ function makeAppointment(intentRequest, callback) {
             
         }
         if (!date) {
-            console.log("beforeCall=" + JSON.stringify(slots));
-            callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
-                slots, 'Date', {
+            if ( keyboard == 1 ) {
+                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name,
+                    slots, 'Date', {
+                        contentType: 'PlainText',
+                        content: `What day would you like to come in?`
+                    }));
+            }
+            else if( keyboard == 2 ) {
+                outputSessionAttributes.keyboard = 1;
+                var pAppointment = `I see you have an appointment on ${buildUTCDateOutputString(appointmentDate)}  at ${buildTimeOutputString(appointmentTime)}`;
+
+                callback(elicitSlot(outputSessionAttributes, intentRequest.currentIntent.name, 
+                    slots, 'Date', {
                     contentType: 'PlainText',
-                    content: `What day would you like to come in?`
+                    content: `${pAppointment}. What day would you like to reschedule too? Just say day or date.`
                 }));
 
+            }
+            else if( keyboard == 3 ) {
+                if (!cancelAvailable(appointmentDate, appointmentTime)) {
+                    callback(close(outputSessionAttributes, 'Fulfilled', {
+                            contentType: 'PlainText',
+                            content: `I am sorry. We have a 24 hour calcellation policy. Have a wonderful day.`
+                        }));
+                    return;
+                }
+                var pAppointment = `I see you have an appointment on ${buildUTCDateOutputString(appointmentDate)}  at ${buildTimeOutputString(appointmentTime)}`;
+                callback(confirmIntent(outputSessionAttributes, intentRequest.currentIntent.name, slots, {
+                    contentType: 'PlainText',
+                    content: `${pAppointment}. Do you want to cancel?`
+                }));              
+            }
             return;
         }
 
@@ -694,11 +793,13 @@ function dispatch(intentRequest, callback) {
     inputTranscript=${intentRequest.inputTranscript}`);
 
     const name = intentRequest.currentIntent.name;
+    const outputSessionAttributes = intentRequest.sessionAttributes || {};
 
     // Dispatch to your skill's intent handlers
     if (name === 'BrentwoodAppointment') {
         return makeAppointment(intentRequest, callback);
     }
+
     throw new Error(`Intent with name ${name} not supported`);
 }
 
@@ -717,20 +818,6 @@ exports.handler = (event, context, callback) => {
         process.env.TZ = 'America/New_York';
         //console.log(`event.bot.name=${event.bot.name}`);
         console.log(`event=`+JSON.stringify(event));
-        /**
-         * Uncomment this if statement and populate with your Lex bot name and / or version as
-         * a sanity check to prevent invoking this Lambda function from an undesired Lex bot or
-         * bot version.
-         */
-        /*
-        if (event.bot.name !== 'MakeAppointment') {
-             callback('Invalid Bot Name');
-        }
-        */
-        //var str = '&lt;?xml version="1.0" encoding="UTF-8"?&gt;';
-        //str += "<root><song>e</song></root>"
-        //callback(str);
-        //c/onsole.log(str);
         dispatch(event, (response) => loggingCallback(response, callback));
     } catch (err) {
         callback(err);
